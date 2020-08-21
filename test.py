@@ -26,7 +26,7 @@ class CollectFromDirectoryTests(unittest.TestCase):
     
     def test_correct_output_type(self):
         """
-        Is the method output is a dictionary?
+        Is the method output a dictionary?
         """
         
         collection = collect_from_directory("test_material/")
@@ -39,7 +39,18 @@ class CollectFromDirectoryTests(unittest.TestCase):
         
         collection = collect_from_directory("test_material/")
         self.assertIn("AH_95", collection.keys())
-        self.assertIn("0018.TextGrid", collection["AH_95"])
-        self.assertIn("0098.TextGrid", collection["AH_95"])
-        self.assertIn("0057.TextGrid", collection["AH_95"])
-        self.assertNotIn("0018.wav", collection["AH_95"])
+        
+        for test_case in ("0018.TextGrid", "0098.TextGrid", "0057.TextGrid"):
+            with self.subTest(test_case):
+                self.assertIn(test_case, collection["AH_95"])
+                
+    def test_file_types_filtered(self):
+        """
+        Does the output dictionary only contain TextGrid files?
+        """
+        
+        collection = collect_from_directory("test_material/")
+        for test_case in ("0018.wav", "0098.wav", "readme.txt"):
+            with self.subTest(test_case):
+                self.assertNotIn(test_case, collection["AH_95"])
+    
