@@ -58,6 +58,7 @@ class CollectFromDirectoryTests(unittest.TestCase):
 class GetVowelDurationTests(unittest.TestCase):
     
     collection = collect_from_directory("test_material/")
+    output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "v1_duration"])
     
     def test_invalid_type_input(self):
         """
@@ -67,7 +68,7 @@ class GetVowelDurationTests(unittest.TestCase):
         for test_case in (None, True, ["AH_95",  ["0018.TextGrid"]], "AH_95: 0018.TextGrid"):
             with self.subTest(test_case):
                 with self.assertRaises(TypeError):
-                    get_vowel_duration(test_case)
+                    get_vowel_duration(test_case, output_df)
     
     def test_bad_structure_input(self):
         """
@@ -77,22 +78,22 @@ class GetVowelDurationTests(unittest.TestCase):
         for test_case in ({"AH_95": "0018.TextGrid", "AH_95": "0019.TextGrid"}, {("0018.TextGrid", "0019.TextGrid", "0047.TextGrid"): "AH_95"}):
             with self.subTest(test_case):
                 with self.assertRaises(ValueError):
-                    get_vowel_duration(test_case)
+                    get_vowel_duration(test_case, output_df)
     
     def test_dataframe_output_type(self):
         """
         Does the function output a pandas.DataFrame object?
         """
-        self.assertIsInstance(collection, pd.DataFrame)
+        self.assertIsInstance(get_vowel_duration(collection, output_df), pd.DataFrame)
     
     def test_dataframe_output_values(self):
         """
         Does the function extract the correct values?
         """
            
-        value_0018 = collection[0, "v1_duration"]   
-        value_0038 = collection[20, "v1_duration"]
-        value_0058 = collection[40, "v1_duration"]
+        value_0018 = get_vowel_duration(collection, output_df)[0, "v1_duration"]   
+        value_0038 = get_vowel_duration(collection, output_df)[20, "v1_duration"]
+        value_0058 = get_vowel_duration(collection, output_df)[40, "v1_duration"]
         
         self.assertAlmostEqual(value_0018, 139.32, places = 1)
         self.assertAlmostEqual(value_0038, 223.54, places = 1)
