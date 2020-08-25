@@ -1,8 +1,11 @@
+from os import read
 from os.path import basename
 import parselmouth
 from parselmouth import praat
+import pandas as pd
 import numpy as np
 from glob import glob
+import re
 import os
 
 
@@ -17,24 +20,20 @@ def collect_from_directory(directory):
 
             dir_content = os.listdir(directory)
             collected_items = {
-                session: [
-                    os.path.basename(file)
-                    for file in glob(os.path.join(directory, session, "*.TextGrid"))
-                ]
+                session: np.asarray(glob(os.path.join(directory, session, "*.TextGrid"))
+                )
                 for session in dir_content
             }
 
             return collected_items
 
         else:
-            print("Please enter a valid path")
-            raise ValueError
+            
+            raise ValueError("Please enter a valid path")
 
     elif directory:
-        print("Please enter a valid path")
-        raise TypeError
+        raise TypeError("Please enter a valid path")
 
     else:
-        print("Please enter a valid path")
-        raise TypeError
-
+        raise TypeError("Please enter a valid path")
+    
