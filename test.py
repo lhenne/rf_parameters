@@ -40,7 +40,7 @@ class CollectFromDirectoryTests(unittest.TestCase):
         collection = collect_from_directory("test_material/")
         self.assertIn("AH_95", collection.keys())
         
-        for test_case in ("0018.TextGrid", "0098.TextGrid", "0057.TextGrid"):
+        for test_case in ("test_material/AH_95/0018.TextGrid", "test_material/AH_95/0098.TextGrid", "test_material/AH_95/0057.TextGrid"):
             with self.subTest(test_case):
                 self.assertIn(test_case, collection["AH_95"])
                 
@@ -57,13 +57,12 @@ class CollectFromDirectoryTests(unittest.TestCase):
     
 class GetVowelDurationTests(unittest.TestCase):
     
-    collection = collect_from_directory("test_material/")
-    output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "v1_duration"])
-    
     def test_invalid_type_input(self):
         """
         Do inputs of invalid data type return an error?
         """
+        
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "v1_duration"])
         
         for test_case in (None, True, ["AH_95",  ["0018.TextGrid"]], "AH_95: 0018.TextGrid"):
             with self.subTest(test_case):
@@ -75,26 +74,37 @@ class GetVowelDurationTests(unittest.TestCase):
         Do dictionary inputs with wrong structure return an error?
         """
         
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "v1_duration"])
+        
         for test_case in ({"AH_95": "0018.TextGrid", "AH_95": "0019.TextGrid"}, {("0018.TextGrid", "0019.TextGrid", "0047.TextGrid"): "AH_95"}):
             with self.subTest(test_case):
-                with self.assertRaises(ValueError):
+                with self.assertRaises(TypeError):
                     get_vowel_duration(test_case, output_df)
     
     def test_dataframe_output_type(self):
         """
         Does the function output a pandas.DataFrame object?
         """
-        self.assertIsInstance(get_vowel_duration(collection, output_df), pd.DataFrame)
+    
+        collection = collect_from_directory("test_material/")
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "v1_duration"])
+        output_df = get_vowel_duration(collection, output_df)
+            
+        self.assertIsInstance(output_df, pd.DataFrame)
     
     def test_dataframe_output_values(self):
         """
         Does the function extract the correct values?
         """
-           
-        value_0018 = get_vowel_duration(collection, output_df)[0, "v1_duration"]   
-        value_0038 = get_vowel_duration(collection, output_df)[20, "v1_duration"]
-        value_0058 = get_vowel_duration(collection, output_df)[40, "v1_duration"]
+    
+        collection = collect_from_directory("test_material/")
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "v1_duration"])
+        output_df = get_vowel_duration(collection, output_df)
+        
+        value_0018 = output_df.loc[output_df["recording"] == "0018", "v1_duration"].item()  
+        value_0038 = output_df.loc[output_df["recording"] == "0038", "v1_duration"].item()
+        value_0058 = output_df.loc[output_df["recording"] == "0058", "v1_duration"].item()  
         
         self.assertAlmostEqual(value_0018, 139.32, places = 1)
         self.assertAlmostEqual(value_0038, 223.54, places = 1)
-        self.assertAlmostEqual(value_0058, 129.0, places = 1)
+        self.assertAlmostEqual(value_0058, 128.77, places = 1)
