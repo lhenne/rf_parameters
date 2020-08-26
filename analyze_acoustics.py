@@ -55,6 +55,7 @@ def get_vowel_duration(collection, output_df):
                 raise TypeError("All values of `collection` must be of type list.")
         
         output_df["filepath"] = pd.concat({k: pd.Series(v) for k, v in collection.items()})
+        output_df["wavpath"] = ["".join([filepath.split(".TextGrid")[0], ".wav"]) for filepath in output_df["filepath"]]
         output_df["recording"] = [filepath.split("/")[-1].split(".TextGrid")[0] for filepath in output_df["filepath"]]
         
         index_tup = output_df.index
@@ -62,7 +63,7 @@ def get_vowel_duration(collection, output_df):
         output_df.reset_index(drop = True, inplace = True)
         
         for index, row in output_df.iterrows():
-            print("Extracting syllable intervals from... {}-{}".format(row["speaker"], row["filepath"]))
+            print("Extracting vowel intervals from... {}-{}".format(row["speaker"], row["filepath"]))
             textgrid = parselmouth.Data.read(row["filepath"])
             
             numtiers = praat.call(textgrid, "Get number of tiers")
@@ -74,10 +75,12 @@ def get_vowel_duration(collection, output_df):
                     numintervals = praat.call(textgrid, "Get number of intervals", tiernum)
                     
                     if numintervals == 3:
-                        print(praat.call(textgrid, "Get end time of interval", tiernum, 2))
-                        print(praat.call(textgrid, "Get start time of interval", tiernum, 2))
-                        row["v1_duration"] = (praat.call(textgrid, "Get end time of interval", tiernum, 2) - praat.call(textgrid, "Get start time of interval", tiernum, 2)) * 1000
+                        row["v1_start"] = praat.call(textgrid, "Get start time of interval", tiernum, 2)
+                        row["v1_end"] =praat.call(textgrid, "Get end time of interval", tiernum, 2)
+                        row["v1_duration"] = (row["v1_end"] - row["v1_start"]) * 1000
                         
+                        sound_obj = parselmouth.Sound(row["wavpath"])
+                        row["v1_wav"] = sound_obj.extract_part(row["v1_start"], row["v1_end"])
             
         return output_df.sort_values("recording")
     
