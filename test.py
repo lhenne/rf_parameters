@@ -122,3 +122,84 @@ class GetVowelDurationTests(unittest.TestCase):
         with self.assertWarns(UserWarning):
             get_vowel_duration(collection, output_df)
 
+class GetFormantsTests(unittest.TestCase):
+    
+    def test_dataframe_output_type(self):
+        """
+        Does the function output a pandas.DataFrame object?
+        """
+        collection = collect_from_directory("test_material/")
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration"])
+        output_df = get_vowel_duration(collection, output_df)
+        
+        formants_df = get_formants(output_df)
+        
+        self.assertIsInstance(formants_df, pd.DataFrame)
+        
+    def test_missing_label(self):
+        """
+        Does the function warn if the label and V1.wav are missing?
+        """
+        collection = collect_from_directory("test_material/")
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3"])
+        durations_df = get_vowel_duration(collection, output_df)
+        
+        with self.assertWarns(UserWarning):
+            get_formants(durations_df)
+        
+    def test_dataframe_output_values_f1(self):
+        """
+        Does the function return the correct values for F1?
+        """
+        
+        collection = collect_from_directory("test_material/")
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration"])
+        output_df = get_vowel_duration(collection, output_df)
+        
+        formants_df = get_formants(output_df)
+        
+        value_0019 = formants_df.loc[formants_df["recording"] == "0019", "f1"].item()  
+        value_0039 = formants_df.loc[formants_df["recording"] == "0039", "f1"].item()
+        value_0059 = formants_df.loc[formants_df["recording"] == "0059", "f1"].item()  
+
+        self.assertAlmostEqual(value_0019, 668.966, places = 1)
+        self.assertAlmostEqual(value_0039, 366.676, places = 1)
+        self.assertAlmostEqual(value_0059, 630.239, places = 1)
+        
+    def test_dataframe_output_values_f2(self):
+        """
+        Does the function return the correct values for F2?
+        """
+        
+        collection = collect_from_directory("test_material/")
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration"])
+        output_df = get_vowel_duration(collection, output_df)
+        
+        formants_df = get_formants(output_df)
+        
+        value_0019 = formants_df.loc[formants_df["recording"] == "0019", "f2"].item()  
+        value_0039 = formants_df.loc[formants_df["recording"] == "0039", "f2"].item()
+        value_0059 = formants_df.loc[formants_df["recording"] == "0059", "f2"].item()  
+
+        self.assertAlmostEqual(value_0019, 1134.546, places = 1)
+        self.assertAlmostEqual(value_0039, 775.480, places = 1)
+        self.assertAlmostEqual(value_0059, 1270.054, places = 1)
+        
+    def test_dataframe_output_values_f3(self):
+        """
+        Does the function return the correct values for F2?
+        """
+        
+        collection = collect_from_directory("test_material/")
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration"])
+        output_df = get_vowel_duration(collection, output_df)
+        
+        formants_df = get_formants(output_df)
+        
+        value_0019 = formants_df.loc[formants_df["recording"] == "0019", "f3"].item()  
+        value_0039 = formants_df.loc[formants_df["recording"] == "0039", "f3"].item()
+        value_0059 = formants_df.loc[formants_df["recording"] == "0059", "f3"].item()  
+
+        self.assertAlmostEqual(value_0019, 2345.740, places = 1)
+        self.assertAlmostEqual(value_0039, 2758.156, places = 1)
+        self.assertAlmostEqual(value_0059, 2496.351, places = 1)
