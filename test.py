@@ -282,3 +282,46 @@ class GetFormantDispersionsTest(unittest.TestCase):
         
         self.assertTrue((f1_f2_values[0] == f1_f2_values).all())
         self.assertTrue((f2_f3_values[0] == f2_f3_values).all())
+   
+        
+class GetRMSTests(unittest.TestCase):
+    
+    def test_dataframe_output_type(self):
+        """
+        Does the function output a pandas.DataFrame object?
+        """
+        
+        collection = {"AH_95": np.array(["test_material/AH_95/0023.TextGrid", "test_material/AH_95/0034.TextGrid", "test_material/AH_95/0055.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "v1_rms"])
+        output_df = get_vowel_duration(collection, output_df)
+
+        rms_df = get_rms(output_df)
+
+        self.assertIsInstance(rms_df, pd.DataFrame)
+        
+    def test_missing_label(self):
+        """
+        Does the function warn the user of missing labels?
+        """
+        
+        collection = {"AH_95": np.array(["test_material/AH_95/0024.TextGrid", "test_material/AH_95/0032.TextGrid", "test_material/AH_95/0060.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "v1_rms"])
+        output_df = get_vowel_duration(collection, output_df)
+        
+        with self.assertWarns(UserWarning):
+            get_rms(output_df)
+            
+    def test_dataframe_output_values(self):
+        """
+        Does the function output the correct RMS values?
+        """
+        
+        collection = {"AH_95": np.array(["test_material/AH_95/0025.TextGrid", "test_material/AH_95/0033.TextGrid", "test_material/AH_95/0061.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "v1_rms"])
+        output_df = get_vowel_duration(collection, output_df)
+        
+        rms_values = list(get_rms(output_df)["v1_rms"])
+        correct_values = [0.09407199488169092, 0.1048775907277835, 0.10630864064829092]
+        
+        self.assertTrue(rms_values is correct_values)
+        
