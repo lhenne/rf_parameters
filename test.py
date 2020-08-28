@@ -122,6 +122,7 @@ class GetVowelDurationTests(unittest.TestCase):
         with self.assertWarns(UserWarning):
             get_vowel_duration(collection, output_df)
 
+
 class GetFormantsTests(unittest.TestCase):
     
     def test_dataframe_output_type(self):
@@ -140,7 +141,7 @@ class GetFormantsTests(unittest.TestCase):
         """
         Does the function warn if the label and V1.wav are missing?
         """
-        collection = collect_from_directory("test_material/")
+        collection = {"AH_95": ["test_material/AH_95/0032.TextGrid"]}
         output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3"])
         durations_df = get_vowel_duration(collection, output_df)
         
@@ -203,3 +204,52 @@ class GetFormantsTests(unittest.TestCase):
         self.assertAlmostEqual(value_0019, 2345.740, places = 1)
         self.assertAlmostEqual(value_0039, 2758.156, places = 1)
         self.assertAlmostEqual(value_0059, 2496.351, places = 1)
+        
+    
+class GetFormantDispersionsTest(unittest.TestCase):
+    
+    def test_dataframe_output_values_f1_f2_dispersion(self):
+        """
+        Does the function return the correct values for F1-F2-dispersion?
+        """
+        
+        collection = {"AH_95": np.array(["test_material/AH_95/0018.TextGrid", "test_material/AH_95/0029.TextGrid", "test_material/AH_95/0057.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"])
+        output_df = get_vowel_duration(collection, output_df)
+        formants_df = get_formants(output_df)
+        
+        dispersions_df = get_formant_dispersions(formants_df)
+        
+        self.assertEqual(dispersions_df.loc[dispersions_df["recording"] == "0018"], 918.424)
+        
+    def test_dataframe_output_values_f2_f3_dispersion(self):
+        """
+        Does the function return the correct values for F2-F3-dispersion?
+        """
+        
+        collection = collect_from_directory("test_material/")
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"])
+        output_df = get_vowel_duration(collection, output_df)
+        formants_df = get_formants(output_df)
+        
+        dispersions_df = get_formant_dispersions(formants_df)
+        
+        self.assertEqual(dispersions_df.loc[dispersions_df["recording"] == "0018"], 2467.532)
+        
+    def test_all_equal(self):
+        """
+        Are the resulting values equal for all recordings of a speaker?
+        """
+        
+        collection = collect_from_directory("test_material/")
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"])
+        output_df = get_vowel_duration(collection, output_df)
+        formants_df = get_formants(output_df)
+        
+        dispersions_df = get_formant_dispersions(formants_df)
+        
+        f1_f2_values = dispersions_df["f1_f2_dispersion"].to_numpy()
+        f2_f3_values = dispersions_df["f2_f3_dispersion"].to_numpy()
+        
+        self.assertTrue((f1_f2_values[0] == f1_f2_values).all())
+        self.assertTrue((f2_f3_values[0] == f2_f3_values).all())
