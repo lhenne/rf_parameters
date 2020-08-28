@@ -323,5 +323,6 @@ class GetRMSTests(unittest.TestCase):
         rms_values = list(get_rms(output_df)["v1_rms"])
         correct_values = [0.09407199488169092, 0.1048775907277835, 0.10630864064829092]
         
-        self.assertTrue(rms_values is correct_values)
-        
+        for i in range(3):
+            with self.subTest(i):
+                self.assertAlmostEqual(rms_values[i], correct_values[i], places = 1)
