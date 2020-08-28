@@ -129,7 +129,7 @@ class GetFormantsTests(unittest.TestCase):
         Does the function output a pandas.DataFrame object?
         """
         collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration"])
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3"])
         output_df = get_vowel_duration(collection, output_df)
         
         formants_df = get_formants(output_df)
@@ -141,7 +141,7 @@ class GetFormantsTests(unittest.TestCase):
         Does the function warn if the label and V1.wav are missing?
         """
         collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3"])
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3"])
         durations_df = get_vowel_duration(collection, output_df)
         
         with self.assertWarns(UserWarning):
@@ -153,7 +153,7 @@ class GetFormantsTests(unittest.TestCase):
         """
         
         collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration"])
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3"])
         output_df = get_vowel_duration(collection, output_df)
         
         formants_df = get_formants(output_df)
@@ -172,7 +172,7 @@ class GetFormantsTests(unittest.TestCase):
         """
         
         collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration"])
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3"])
         output_df = get_vowel_duration(collection, output_df)
         
         formants_df = get_formants(output_df)
@@ -191,7 +191,7 @@ class GetFormantsTests(unittest.TestCase):
         """
         
         collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration"])
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3"])
         output_df = get_vowel_duration(collection, output_df)
         
         formants_df = get_formants(output_df)
