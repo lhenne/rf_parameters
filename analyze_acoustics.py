@@ -79,11 +79,9 @@ def get_vowel_duration(collection, output_df):
                         row["v1_end"] =praat.call(textgrid, "Get end time of interval", tiernum, 2)
                         row["v1_duration"] = (row["v1_end"] - row["v1_start"]) * 1000
                         
-                        sound_obj = parselmouth.Sound(row["wavpath"])
-                        row["v1_wav"] = sound_obj.extract_part(row["v1_start"], row["v1_end"])
-
+                        row["sound_obj"] = parselmouth.Sound(row["wavpath"])
                     else:
-                        row[["v1_start", "v1_end", "v1_duration","v1_wav"]] = [np.nan, np.nan, np.nan, np.nan]
+                        row[["v1_start", "v1_end", "v1_duration", "sound_obj"]] = [np.nan, np.nan, np.nan, np.nan]
                         warnings.warn("{}-{} is missing a V1 annotation or the V1 annotation could not be automatically determined.".format(row["speaker"], row["recording"]), UserWarning)
             
             if found_vowel_tier is False:
@@ -95,4 +93,27 @@ def get_vowel_duration(collection, output_df):
     
     else:
         raise TypeError("Please provide a dictionary-type collection of recordings and a pandas DataFrame for the output.")
+
+def get_formants(dataset):
+
+    """
+    * Use the V1 sound object from the output of `get_vowel_duration()` to get the average Hz value of formants F1, F2, F3 in that segment.
+    """
     
+    if isinstance(dataset, pd.DataFrame) and "sound_obj" in dataset.columns:
+        
+        for index, row in tqdm(dataset.iterrows(), desc="Extracting V1 formant averages"):
+            if isinstance(row["sound_obj"], parselmouth.Sound):
+                formant_obj = row["sound_obj"].to_formant_burg(maximum_formant = 5000.0)
+                
+                row["f1"] = praat.call(formant_obj, "Get mean", 1, row["v1_start"], row["v1_end"], "Hertz")
+                row["f2"] = praat.call(formant_obj, "Get mean", 2, row["v1_start"], row["v1_end"], "Hertz")
+                row["f3"] = praat.call(formant_obj, "Get mean", 3, row["v1_start"], row["v1_end"], "Hertz")
+                
+            else:
+                warnings.warn("Skipping formant measurement for {}-{}: missing V1 segment sound data.".format(row["speaker"], row ["recording"]), UserWarning)
+                
+        return dataset.sort_values("recording")
+        
+    else:
+        raise TypeError("Please provide a DataFrame containing a column of V1 segment sound data.")
