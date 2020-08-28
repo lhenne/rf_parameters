@@ -207,6 +207,35 @@ class GetFormantsTests(unittest.TestCase):
         
     
 class GetFormantDispersionsTest(unittest.TestCase):
+        
+    def test_dataframe_output_type(self):
+        """
+        Does the function output a pandas.DataFrame object?
+        """
+        
+        collection = {"AH_95": np.array(["test_material/AH_95/0022.TextGrid", "test_material/AH_95/0032.TextGrid", "test_material/AH_95/0059.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"])
+        output_df = get_vowel_duration(collection, output_df)
+        formants_df = get_formants(output_df)
+
+        dispersions_df = get_formant_dispersions(formants_df)
+
+        self.assertIsInstance(dispersions_df, pd.DataFrame)
+            
+        
+    def test_missing_label(self):
+        """
+        Does the function warn the user of missing labels?
+        """
+        
+        collection = {"AH_95": np.array(["test_material/AH_95/0018.TextGrid", "test_material/AH_95/0032.TextGrid", "test_material/AH_95/0057.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"])
+        output_df = get_vowel_duration(collection, output_df)
+        formants_df = get_formants(output_df)
+        
+        with self.assertWarns(UserWarning):
+            get_formant_dispersions(formants_df)
+                
     
     def test_dataframe_output_values_f1_f2_dispersion(self):
         """
