@@ -220,21 +220,21 @@ class GetFormantDispersionsTest(unittest.TestCase):
         
         dispersions_df = get_formant_dispersions(formants_df)
         
-        self.assertEqual(dispersions_df.loc[dispersions_df["recording"] == "0018"], 918.424)
+        self.assertAlmostEqual(dispersions_df.loc[dispersions_df["recording"] == "0018", "f1_f2_dispersion"].item(), 918.424, places = 1)
         
     def test_dataframe_output_values_f2_f3_dispersion(self):
         """
         Does the function return the correct values for F2-F3-dispersion?
         """
         
-        collection = collect_from_directory("test_material/")
+        collection =  {"AH_95": np.array(["test_material/AH_95/0018.TextGrid", "test_material/AH_95/0029.TextGrid", "test_material/AH_95/0057.TextGrid"])}
         output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"])
         output_df = get_vowel_duration(collection, output_df)
         formants_df = get_formants(output_df)
         
         dispersions_df = get_formant_dispersions(formants_df)
         
-        self.assertEqual(dispersions_df.loc[dispersions_df["recording"] == "0018"], 2467.532)
+        self.assertAlmostEqual(dispersions_df.loc[dispersions_df["recording"] == "0018", "f2_f3_dispersion"].item(), 2467.532, places = 1)
         
     def test_all_equal(self):
         """
