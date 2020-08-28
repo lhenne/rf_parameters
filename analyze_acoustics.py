@@ -117,3 +117,35 @@ def get_formants(dataset):
         
     else:
         raise TypeError("Please provide a DataFrame containing a column of V1 segment sound data.")
+    
+
+def get_formant_dispersions(dataset):
+    
+    """
+    Use the formant measurements from `get_formants()` to calculate formant dispersion for each speaker
+    """
+    
+    if isinstance(dataset, pd.DataFrame) and all(col in dataset.columns for col in ["f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"]):
+        for speaker in dataset["speaker"].unique():
+            recordings = dataset.loc[dataset["speaker"] == speaker, ["f1", "f2", "f3"]]
+            f1s = list(recordings["f1"].dropna())
+            f2s = list(recordings["f2"].dropna())
+            f3s = list(recordings["f3"].dropna())
+            
+            if not len(f1s) == len(f2s) == len(f3s):
+                warnings.warn("There are more formants of one kind than of another.", UserWarning)
+                        
+            formant_count = max(len(f1s), len(f2s), len(f3s))
+            
+            if not formant_count == len(recordings):
+                warnings.warn("One or more recordings do not have any corresponding formant values.")
+            
+            f1_f2_dispersion = sum([f2s[i] - f1s[i] for i in range(formant_count)]) / (formant_count - 1)
+            f2_f3_dispersion = sum([f3s[i] - f2s[i] for i in range(formant_count)]) / (formant_count - 1)
+            
+            dataset.loc[dataset["speaker"] == speaker, "f1_f2_dispersion"] = f1_f2_dispersion
+            dataset.loc[dataset["speaker"] == speaker, "f2_f3_dispersion"] = f2_f3_dispersion
+
+            return dataset
+    else:
+        raise TypeError("Please provide a DataFrame containing formant data.")
