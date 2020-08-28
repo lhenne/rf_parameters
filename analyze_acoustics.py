@@ -61,7 +61,7 @@ def get_vowel_duration(collection, output_df):
         output_df["speaker"] = [tup[0] for tup in index_tup]
         output_df.reset_index(drop = True, inplace = True)
         
-        for index, row in tqdm(output_df.iterrows(), desc="Extracting vowel intervals"):
+        for _, row in tqdm(output_df.iterrows(), desc="Extracting vowel intervals"):
             textgrid = parselmouth.Data.read(row["filepath"])
             
             numtiers = praat.call(textgrid, "Get number of tiers")
@@ -102,7 +102,7 @@ def get_formants(dataset):
     
     if isinstance(dataset, pd.DataFrame) and "sound_obj" in dataset.columns:
         
-        for index, row in tqdm(dataset.iterrows(), desc="Extracting V1 formant averages"):
+        for _, row in tqdm(dataset.iterrows(), desc="Extracting V1 formant averages"):
             if isinstance(row["sound_obj"], parselmouth.Sound):
                 formant_obj = row["sound_obj"].to_formant_burg(maximum_formant = 5000.0)
                 
@@ -149,3 +149,21 @@ def get_formant_dispersions(dataset):
             return dataset
     else:
         raise TypeError("Please provide a DataFrame containing formant data.")
+    
+def get_rms(dataset):
+    
+    """
+    Calculate the root-mean-square energy over the duration of the vowel.
+    """
+    
+    if isinstance(dataset, pd.DataFrame) and all(col in dataset.columns for col in ["v1_rms", "v1_start", "v1_end", "sound_obj"]):
+        for _, row in tqdm(dataset.iterrows(), desc="Calculating vowel RMS"):
+            if isinstance(row["sound_obj"], parselmouth.Sound):
+                row["v1_rms"] = row["sound_obj"].get_root_mean_square(from_time = row["v1_start"], to_time = row["v1_end"])
+            
+            else:
+                warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
+        return dataset
+    
+    else:        
+        raise TypeError("Please provide a DataFrame containing vowel data.")
