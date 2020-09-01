@@ -48,7 +48,7 @@ def get_vowel_duration(collection, output_df):
     if isinstance(collection, dict) and "filepath" in output_df.columns:
         
         for value in collection.values():
-            if isinstance(value, (np.ndarray, np.generic)):
+            if isinstance(value, (np.ndarray, np.generic)) or isinstance(value, list):
                 pass
             else:
                 raise TypeError("All values of `collection` must be of type list.")
@@ -167,3 +167,25 @@ def get_rms(dataset):
     
     else:        
         raise TypeError("Please provide a DataFrame containing vowel data.")
+    
+
+def get_spectral_tilt(dataset):
+    
+    """
+    Calculate the spectral tilt over the timespan of the V1 label.
+    Spectral tilt definition: Mean value of the first Mel-frequency cepstral coefficient (C1).
+    To extract this value, a Praat MFCC object has to be calculated.
+    """
+    
+    if isinstance(dataset, pd.DataFrame) and all(col in dataset.columns for col in ["sound_obj", "v1_start", "v1_end", "v1_obj", "v1_mfcc", "v1_tilt"]):
+        for _, row in tqdm(dataset.iterrows(), desc = "Extracting V1 audio part, creating MFCC object and extracting mean C1."):
+            if isinstance(row["sound_obj"], parselmouth.Sound):
+                row["v1_obj"] = row["sound_obj"].extract_part(from_time = row["v1_start"], to_time = row["v1_end"])
+                row["v1_mfcc"] = row["v1_obj"].to_mfcc(number_of_coefficients = 1)
+                row["v1_tilt"] = np.mean(row["v1_mfcc"].to_array()[1])
+                
+            else:
+                warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
+        return dataset
+
+    else: raise TypeError("Please provide a DataFrame containing vowel data.")
