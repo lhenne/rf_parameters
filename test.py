@@ -336,7 +336,7 @@ class GetSpectralTiltTests(unittest.TestCase):
         """
         
         collection = {"AH_95": np.array(["test_material/AH_95/0024.TextGrid", "test_material/AH_95/0035.TextGrid", "test_material/AH_95/0072.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "mfcc_obj", "v1_mfcc", "v1_tilt"])
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt"])
         output_df = get_vowel_duration(collection, output_df)
 
         tilt_df = get_spectral_tilt(output_df)
@@ -391,3 +391,70 @@ class GetSpectralTiltTests(unittest.TestCase):
         self.assertAlmostEqual(value_0029, 422.068372224925, places = 1)
         self.assertAlmostEqual(value_0059, 496.260799840674, places = 1)
         self.assertAlmostEqual(value_0079, 525.309714939446, places = 1)
+        
+
+class GetCenterOfGravityTests(unittest.TestCase):
+    
+    def test_dataframe_output_type(self):
+        """
+        Does the function output a pandas.DataFrame object?
+        """
+        
+        collection = {"AH_95": np.array(["test_material/AH_95/0024.TextGrid", "test_material/AH_95/0035.TextGrid", "test_material/AH_95/0072.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt", "v1_spectrum", "v1_cog"])
+        output_df = get_vowel_duration(collection, output_df)
+        output_df = get_spectral_tilt(output_df)
+        
+        cog_df = get_center_of_gravity(output_df)
+
+        self.assertIsInstance(cog_df, pd.DataFrame)
+        
+    def test_missing_label(self):
+        """
+        Does the function warn the user of missing labels?
+        """
+        
+        collection = {"AH_95": np.array(["test_material/AH_95/0024.TextGrid", "test_material/AH_95/0032.TextGrid", "test_material/AH_95/0060.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt", "v1_spectrum", "v1_cog"])
+        output_df = get_vowel_duration(collection, output_df)
+        output_df = get_spectral_tilt(output_df)
+        
+        with self.assertWarns(UserWarning):
+            get_center_of_gravity(output_df)
+            
+    def test_spectrum_obj(self):
+        """
+        Does the function generate a parselmouth.Spectrum object for the V1 timespan correctly?
+        """
+        
+        collection = {"AH_95": np.array(["test_material/AH_95/0048.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt", "v1_spectrum", "v1_cog"])
+        output_df = get_vowel_duration(collection, output_df)
+        output_df = get_spectral_tilt(output_df)
+        
+        cog_df = get_center_of_gravity(output_df)
+        
+        v1_spectrum = cog_df.loc[cog_df["recording"] == "0048", "v1_spectrum"].item()
+        
+        self.assertIsInstance(v1_spectrum, parselmouth.Spectrum)
+        
+    def test_dataframe_output_values(self):
+        """
+        Does the function output the correct values for the center of gravity?
+        """
+
+        collection = {"AH_95": np.array(["test_material/AH_95/0048.TextGrid", "test_material/AH_95/0053.TextGrid","test_material/AH_95/0082.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt", "v1_spectrum", "v1_cog"])
+        output_df = get_vowel_duration(collection, output_df)
+        output_df = get_spectral_tilt(output_df)
+        
+        cog_df = get_center_of_gravity(output_df)
+        
+        value_0048 = cog_df.loc[cog_df["recording"] == "0048", "v1_cog"].item()
+        value_0053 = cog_df.loc[cog_df["recording"] == "0053", "v1_cog"].item()
+        value_0082 = cog_df.loc[cog_df["recording"] == "0082", "v1_cog"].item()
+        
+        self.assertAlmostEqual(value_0048, 203.01152241248, places = 1)
+        self.assertAlmostEqual(value_0053, 509.792070942813, places = 1)
+        self.assertAlmostEqual(value_0082, 261.330887819259, places = 1)
+        
