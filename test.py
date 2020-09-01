@@ -326,3 +326,68 @@ class GetRMSTests(unittest.TestCase):
         for i in range(3):
             with self.subTest(i):
                 self.assertAlmostEqual(rms_values[i], correct_values[i], places = 1)
+
+
+class GetSpectralTiltTests(unittest.TestCase):
+    
+    def test_dataframe_output_type(self):
+        """
+        Does the function output a pandas.DataFrame object?
+        """
+        
+        collection = {"AH_95": np.array(["test_material/AH_95/0024.TextGrid", "test_material/AH_95/0035.TextGrid", "test_material/AH_95/0072.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "mfcc_obj", "v1_mfcc", "v1_tilt"])
+        output_df = get_vowel_duration(collection, output_df)
+
+        tilt_df = get_spectral_tilt(output_df)
+
+        self.assertIsInstance(tilt_df, pd.DataFrame)
+        
+    def test_missing_label(self):
+        """
+        Does the function warn the user of missing labels?
+        """
+        
+        collection = {"AH_95": np.array(["test_material/AH_95/0024.TextGrid", "test_material/AH_95/0032.TextGrid", "test_material/AH_95/0060.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt"])
+        output_df = get_vowel_duration(collection, output_df)
+        
+        with self.assertWarns(UserWarning):
+            get_spectral_tilt(output_df)
+    
+    
+    def test_mfcc_object(self):
+        """
+        Does the function generate a parselmouth.Sound and a parselmouth.MFCC object for the V1 timespan correctly?
+        """
+        
+        collection = {"AH_95": np.array(["test_material/AH_95/0024.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt"])
+        output_df = get_vowel_duration(collection, output_df)
+        
+        tilt_df = get_spectral_tilt(output_df)
+        
+        v1_sound = tilt_df.loc[tilt_df["recording"] == "0024", "v1_obj"].item()
+        v1_mfcc = tilt_df.loc[tilt_df["recording"] == "0024", "v1_mfcc"].item()
+        
+        self.assertIsInstance(v1_sound, parselmouth.Sound)
+        self.assertIsInstance(v1_mfcc, parselmouth.MFCC)
+    
+    def test_dataframe_output_values(self):
+        """
+        Does the function calculate the V1 spectral tilt correctly? (mean C1 from the MFCC object)
+        """
+        
+        collection = {"AH_95": np.array(["test_material/AH_95/0029.TextGrid",  "test_material/AH_95/0059.TextGrid", "test_material/AH_95/0079.TextGrid"])}
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt"])
+        output_df = get_vowel_duration(collection, output_df)
+        
+        tilt_df = get_spectral_tilt(output_df)
+        
+        value_0029 = tilt_df.loc[tilt_df["recording"] == "0029", "v1_tilt"].item()
+        value_0059 = tilt_df.loc[tilt_df["recording"] == "0059", "v1_tilt"].item()
+        value_0079 = tilt_df.loc[tilt_df["recording"] == "0079", "v1_tilt"].item()
+        
+        self.assertAlmostEqual(value_0029, 422.068372224925, places = 1)
+        self.assertAlmostEqual(value_0059, 496.260799840674, places = 1)
+        self.assertAlmostEqual(value_0079, 525.309714939446, places = 1)
