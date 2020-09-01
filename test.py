@@ -438,7 +438,7 @@ class GetCenterOfGravityTests(unittest.TestCase):
         value_0053 = cog_df.loc[cog_df["recording"] == "0053", "v1_cog"].item()
         value_0082 = cog_df.loc[cog_df["recording"] == "0082", "v1_cog"].item()
         
-        self.assertAlmostEqual(value_0048, 203.01152241248, places = 1)
+        self.assertAlmostEqual(value_0048, 202.95697978608, places = 1)
         self.assertAlmostEqual(value_0053, 509.792070942813, places = 1)
         self.assertAlmostEqual(value_0082, 261.330887819259, places = 1)
         
