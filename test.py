@@ -421,22 +421,6 @@ class GetCenterOfGravityTests(unittest.TestCase):
         
         with self.assertWarns(UserWarning):
             get_center_of_gravity(output_df)
-            
-    def test_spectrum_obj(self):
-        """
-        Does the function generate a parselmouth.Spectrum object for the V1 timespan correctly?
-        """
-        
-        collection = {"AH_95": np.array(["test_material/AH_95/0048.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt", "v1_spectrum", "v1_cog"])
-        output_df = get_vowel_duration(collection, output_df)
-        output_df = get_spectral_tilt(output_df)
-        
-        cog_df = get_center_of_gravity(output_df)
-        
-        v1_spectrum = cog_df.loc[cog_df["recording"] == "0048", "v1_spectrum"].item()
-        
-        self.assertIsInstance(v1_spectrum, parselmouth.Spectrum)
         
     def test_dataframe_output_values(self):
         """
