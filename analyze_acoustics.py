@@ -186,6 +186,30 @@ def get_spectral_tilt(dataset):
                 
             else:
                 warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
+        
         return dataset
 
     else: raise TypeError("Please provide a DataFrame containing vowel data.")
+    
+
+def get_center_of_gravity(dataset):
+    
+    """
+    Calculate the center of gravity over the timespan of the V1 label.
+    To extract this value, a Praat Spectrum object has to be calculated.
+    """
+    
+    if isinstance(dataset, pd.DataFrame) and all(col in dataset.columns for col in ["sound_obj", "v1_start", "v1_end", "v1_obj", "v1_mfcc", "v1_tilt", "v1_cog"]):
+        for _, row in tqdm(dataset.iterrows(), desc = "Creating Spectrum object and extracting center of gravity."):
+            if isinstance(row["v1_obj"], parselmouth.Sound):
+                row["v1_cog"] = row["v1_obj"].to_spectrum().get_centre_of_gravity()
+    
+            else:
+                warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
+        
+        return dataset
+    
+    else: raise TypeError("Please provide a DataFrame containing vowel data.")
+    
+
+    
