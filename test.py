@@ -64,7 +64,7 @@ class GetVowelDurationTests(unittest.TestCase):
         Do inputs of invalid data type return an error?
         """
         
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration"])
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration"])
         
         for test_case in (None, True, ["AH_95",  ["0018.TextGrid"]], "AH_95: 0018.TextGrid"):
             with self.subTest(test_case):
@@ -76,7 +76,7 @@ class GetVowelDurationTests(unittest.TestCase):
         Do dictionary inputs with wrong structure return an error?
         """
         
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration"])
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration"])
         
         for test_case in ({"AH_95": "0018.TextGrid", "AH_95": "0019.TextGrid"}, {("0018.TextGrid", "0019.TextGrid", "0047.TextGrid"): "AH_95"}):
             with self.subTest(test_case):
@@ -89,7 +89,7 @@ class GetVowelDurationTests(unittest.TestCase):
         """
     
         collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration"])
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration"])
         output_df = get_vowel_duration(collection, output_df)
             
         self.assertIsInstance(output_df, pd.DataFrame)
@@ -100,7 +100,7 @@ class GetVowelDurationTests(unittest.TestCase):
         """
     
         collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration"])
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration"])
         output_df = get_vowel_duration(collection, output_df)
         
         value_0018 = output_df.loc[output_df["recording"] == "0018", "v1_duration"].item()  
@@ -117,7 +117,7 @@ class GetVowelDurationTests(unittest.TestCase):
         """
         
         collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "v1_wav", "v1_start", "v1_end", "v1_duration"])
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration"])
 
         with self.assertWarns(UserWarning):
             get_vowel_duration(collection, output_df)
