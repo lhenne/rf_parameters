@@ -212,4 +212,45 @@ def get_center_of_gravity(dataset):
     else: raise TypeError("Please provide a DataFrame containing vowel data.")
     
 
+def get_word_durations(dataset):
     
+    """
+    Get the durations of tool and target word labels, and then calculate the ratio of tool to target.
+    """
+    
+    if isinstance(dataset, pd.DataFrame) and all(col in dataset.columns for col in ["filepath", "tool_duration", "target_duration", "ratio_word_duration"]):
+        for _, row in tqdm(dataset.iterrows(), desc = "Calculating word durations and ratio of words durations."):
+            textgrid = parselmouth.Data.read(row["filepath"])
+            
+            numtiers = praat.call(textgrid, "Get number of tiers")
+            found_word_tier = False
+            
+            for tiernum in range(1, numtiers+1):
+                tiername = praat.call(textgrid, "Get tier name", tiernum)
+                
+                if tiername == "Word":
+                    found_word_tier = True
+                    numintervals = praat.call(textgrid, "Get number of intervals", tiernum)
+                    
+                    if numintervals == 5:
+                        tool_start = praat.call(textgrid, "Get start time of interval", tiernum, 2)
+                        tool_end = praat.call(textgrid, "Get end time of interval", tiernum, 2)
+                        row["tool_duration"] = (tool_end - tool_start) * 1000
+                        
+                        target_start = praat.call(textgrid, "Get start time of interval", tiernum, 4)
+                        target_end = praat.call(textgrid, "Get end time of interval", tiernum, 4)
+                        row["target_duration"] = (target_end - target_start) * 1000
+                        
+                        row["ratio_word_duration"] = row["tool_duration"] / row["target_duration"]
+                    else:
+                        warnings.warn("{}-{} is missing word annotations or the word annotations could not be automatically determined.".format(row["speaker"], row["recording"]), UserWarning)
+                
+            if found_word_tier is False:
+                warnings.warn("{}-{} does not contain Word tier.".format(row["speaker"], row["recording"]), UserWarning)
+            else:
+                pass
+        return dataset
+    
+    else:
+        raise TypeError("Please provide a DataFrame containing the necessary columns.")
+                        
