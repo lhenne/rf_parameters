@@ -442,3 +442,65 @@ class GetCenterOfGravityTests(unittest.TestCase):
         self.assertAlmostEqual(value_0053, 509.792070942813, places = 1)
         self.assertAlmostEqual(value_0082, 261.330887819259, places = 1)
         
+    
+class GetWordDurationsTest(unittest.TestCase):
+    
+    def test_dataframe_output_type(self):
+        """
+        Does the function output a pandas.DataFrame object?
+        """
+    
+        collection = collect_from_directory("test_material/")
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration", "tool_duration", "target_duration", "ratio_word_duration"])
+        output_df = get_vowel_duration(collection, output_df)
+        
+        output_df = get_word_durations(output_df)
+            
+        self.assertIsInstance(output_df, pd.DataFrame)
+    
+    def test_dataframe_output_values(self):
+        """
+        Does the function extract the correct values?
+        """
+    
+        collection = collect_from_directory("test_material/")
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration", "tool_duration", "target_duration", "ratio_word_duration"])
+        output_df = get_vowel_duration(collection, output_df)
+        
+        output_df = get_word_durations(output_df)
+        
+        tool_0025 = output_df.loc[output_df["recording"] == "0025", "tool_duration"].item()  
+        target_0025 = output_df.loc[output_df["recording"] == "0025", "target_duration"].item()  
+        ratio_0025 = output_df.loc[output_df["recording"] == "0025", "ratio_word_duration"].item()  
+        
+        tool_0037 = output_df.loc[output_df["recording"] == "0037", "tool_duration"].item()
+        target_0037 = output_df.loc[output_df["recording"] == "0037", "target_duration"].item()
+        ratio_0037 = output_df.loc[output_df["recording"] == "0037", "ratio_word_duration"].item()
+        
+        tool_0081 = output_df.loc[output_df["recording"] == "0081", "tool_duration"].item()
+        target_0081 = output_df.loc[output_df["recording"] == "0081", "target_duration"].item()  
+        ratio_0081 = output_df.loc[output_df["recording"] == "0081", "ratio_word_duration"].item() 
+        
+        self.assertAlmostEqual(tool_0025, 292.096, places = 1)
+        self.assertAlmostEqual(target_0025, 387.95, places = 1)
+        self.assertAlmostEqual(ratio_0025, 0.75282897, places = 1)
+        
+        self.assertAlmostEqual(tool_0037, 417.543, places = 1)
+        self.assertAlmostEqual(target_0037, 348.814, places = 1)
+        self.assertAlmostEqual(ratio_0037, 1.1970362, places = 1)
+        
+        self.assertAlmostEqual(tool_0081, 344.82, places = 1)
+        self.assertAlmostEqual(target_0081, 413.693, places = 1)
+        self.assertAlmostEqual(ratio_0081, 0.83351664, places = 1)
+        
+    def test_missing_label(self):
+        """
+        Does the function correctly deal with the one missing V1 label?
+        """
+        
+        collection = collect_from_directory("test_material/")
+        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration",  "tool_duration", "target_duration", "ratio_word_duration"])
+        output_df = get_vowel_duration(collection, output_df)
+        
+        with self.assertWarns(UserWarning):
+            get_word_durations(output_df)
