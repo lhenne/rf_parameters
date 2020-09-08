@@ -91,8 +91,10 @@ class Analyzer():
 
             if os.path.isfile(os.path.join(os.getcwd(), self.outfile)) or os.path.isfile(self.outfile):
                 input_df = pd.read_csv(self.outfile)
+                
+                self.output_data = self.data[["speaker", "utterance", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion", "v1_rms", "v1_tilt", "v1_cog", "tool_duration", "target_duration", "ratio_word_duration"]]
             
-                output_df = input_df.merge(self.data, how = "left", on = ["speaker", "utterance"])
+                output_df = input_df.merge(self.output_data, how = "left", on = ["speaker", "utterance"])
                 
                 with open(self.outfile, "w+") as outfile:
                     output_df.to_csv(outfile, sep = ",")
