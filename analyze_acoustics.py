@@ -17,7 +17,7 @@ class Analyzer():
         self.directory = input("Input path, containing Praat TextGrids and sound files in sub-folders: ")
         self.method_calls = list()
 
-        method_prompts = ["Get vowel durations? [y/n]", "Get formant averages? [y/n]", "Get formant dispersions per speaker? [y/n]", "Get RMS values? [y/n]", "Get spectral tilt? [y/n]", "Get center of gravity? [y/n]", "Get word durations? [y/n]"] 
+        method_prompts = ["Get vowel durations? [Y/n]", "Get formant averages? [Y/n]", "Get formant dispersions per speaker? [Y/n]", "Get RMS values? [Y/n]", "Get spectral tilt? [Y/n]", "Get center of gravity? [Y/n]", "Get word durations? [Y/n]"] 
         
         for i in range(len(method_prompts)):
             call_method = input(method_prompts[i])
@@ -30,10 +30,13 @@ class Analyzer():
         self.outfile = input("Output file, CSV to create or append to: ")
         
         if any(self.method_calls):
+            self.data = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath"])
             self.collection = self.collect_from_directory()
-                    
-            
-            
+
+            if self.method_calls[0]:
+                self.data = self.data.assign(v1_start = np.nan, v1_end = np.nan, v1_duration = np.nan, sound_obj = np.nan)
+                print("Calculating vowel durations...")
+                self.get_vowel_duration()
             
         else:
             print("Nothing performed. Exiting.")        
@@ -53,77 +56,73 @@ class Analyzer():
                     session: np.asarray(glob(os.path.join(self.directory, session, "*.TextGrid"))
                     )
                     for session in dir_content
-                }
+                }   
 
-                return collected_items
+                for value in collected_items.values():
+                    if isinstance(value, (np.ndarray, np.generic)) or isinstance(value, list):
+                        pass
+                    else:
+                        raise TypeError("All values of `collection` must be of type list.")
+                    
+                self.data["filepath"] = pd.concat({k: pd.Series(v) for k, v in collected_items.items()})
+                self.data["wavpath"] = ["".join([filepath.split(".TextGrid")[0], ".wav"]) for filepath in self.data["filepath"]]
+                self.data["recording"] = [filepath.split("/")[-1].split(".TextGrid")[0] for filepath in self.data["filepath"]]
+                
+                index_tup = self.data.index
+                self.data["speaker"] = [tup[0] for tup in index_tup]
+                self.data.reset_index(drop = True, inplace = True)    
 
             else:
-                
                 raise ValueError("Please enter a valid path")
-
-        elif self.directory:
-            raise TypeError("Please enter a valid path")
 
         else:
             raise TypeError("Please enter a valid path")
     
     
-def get_vowel_duration(collection, output_df):
-    
-    """
-    * Import the dictionary created by `collect_from_directory`
-    * Process the TextGrid file with praat-parselmouth
-    * Return a pandas DataFrame containing speaker, utterance, TextGrid-filename and vowel duration
-    """
-    
-    if isinstance(collection, dict) and "filepath" in output_df.columns:
+    def get_vowel_duration(self):
         
-        for value in collection.values():
-            if isinstance(value, (np.ndarray, np.generic)) or isinstance(value, list):
-                pass
-            else:
-                raise TypeError("All values of `collection` must be of type list.")
+        """
+        * Import the DataFrame created by `collect_from_directory`
+        * Process the TextGrid file with praat-parselmouth
+        * Return a DataFrame containing speaker, utterance, TextGrid-filename and vowel duration
+        """
         
-        output_df["filepath"] = pd.concat({k: pd.Series(v) for k, v in collection.items()})
-        output_df["wavpath"] = ["".join([filepath.split(".TextGrid")[0], ".wav"]) for filepath in output_df["filepath"]]
-        output_df["recording"] = [filepath.split("/")[-1].split(".TextGrid")[0] for filepath in output_df["filepath"]]
-        
-        index_tup = output_df.index
-        output_df["speaker"] = [tup[0] for tup in index_tup]
-        output_df.reset_index(drop = True, inplace = True)
-        
-        for _, row in tqdm(output_df.iterrows(), desc="Extracting vowel intervals"):
-            textgrid = parselmouth.Data.read(row["filepath"])
+        if isinstance(self.data, pd.DataFrame) and "filepath" in self.data.columns:
             
-            numtiers = praat.call(textgrid, "Get number of tiers")
-            found_vowel_tier = False
-            
-            for tiernum in range(1, numtiers+1):
-                tiername = praat.call(textgrid, "Get tier name", tiernum)
+            for _, row in tqdm(self.data.iterrows(), desc="Extracting vowel intervals", total = len(self.data), leave = True, position = 0):
+                textgrid = parselmouth.Data.read(row["filepath"])
                 
-                if tiername == "Vowel":
-                    found_vowel_tier = True
-                    numintervals = praat.call(textgrid, "Get number of intervals", tiernum)
+                numtiers = praat.call(textgrid, "Get number of tiers")
+                found_vowel_tier = False
+                
+                for tiernum in range(1, numtiers+1):
+                    tiername = praat.call(textgrid, "Get tier name", tiernum)
                     
-                    if numintervals == 3:
-                        row["v1_start"] = praat.call(textgrid, "Get start time of interval", tiernum, 2)
-                        row["v1_end"] =praat.call(textgrid, "Get end time of interval", tiernum, 2)
-                        row["v1_duration"] = (row["v1_end"] - row["v1_start"]) * 1000
+                    if tiername == "Vowel":
+                        found_vowel_tier = True
+                        numintervals = praat.call(textgrid, "Get number of intervals", tiernum)
                         
-                        row["sound_obj"] = parselmouth.Sound(row["wavpath"])
-                    else:
-                        row[["v1_start", "v1_end", "v1_duration", "sound_obj"]] = [np.nan, np.nan, np.nan, np.nan]
-                        warnings.warn("{}-{} is missing a V1 annotation or the V1 annotation could not be automatically determined.".format(row["speaker"], row["recording"]), UserWarning)
-            
-            if found_vowel_tier is False:
-                warnings.warn("{}-{} does not contain Vowel tier.".format(row["speaker"], row["recording"]), UserWarning)
-            else:
-                pass
-            
-        return output_df.sort_values("recording")
+                        if numintervals == 3:
+                            row["v1_start"] = praat.call(textgrid, "Get start time of interval", tiernum, 2)
+                            row["v1_end"] =praat.call(textgrid, "Get end time of interval", tiernum, 2)
+                            row["v1_duration"] = (row["v1_end"] - row["v1_start"]) * 1000
+                            
+                            row["sound_obj"] = parselmouth.Sound(row["wavpath"])
+                        else:
+                            row[["v1_start", "v1_end", "v1_duration", "sound_obj"]] = [np.nan, np.nan, np.nan, np.nan]
+                            warnings.warn_explicit("{}-{} is missing a V1 annotation or the V1 annotation could not be automatically determined.".format(row["speaker"], row["recording"]), UserWarning, "analyze_acoustics.py", 113)
+                
+                if found_vowel_tier is False:
+                    warnings.warn("{}-{} does not contain Vowel tier.".format(row["speaker"], row["recording"]), UserWarning)
+                else:
+                    pass
+                
+            self.data.sort_values("recording")
+        
+        else:
+            raise TypeError("Please provide a dictionary-type collection of recordings and a pandas DataFrame for the output.")
     
-    else:
-        raise TypeError("Please provide a dictionary-type collection of recordings and a pandas DataFrame for the output.")
+
 
 def get_formants(dataset):
 
