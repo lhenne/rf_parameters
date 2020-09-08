@@ -39,8 +39,8 @@ class Analyzer():
             self.data = pd.DataFrame(columns = ["speaker", "utterance", "filepath", "wavpath"])
             self.collection = self.collect_from_directory()
             
-            if os.path.isfile(os.path.join(self.directory, self.speaker_sex)) or os.path.isfile(self.speaker_sex):
-                self.speaker_sex = pd.read_csv(self.speaker_sex)
+            if os.path.isfile(os.path.join(self.directory, self.speaker_sex)):
+                self.speaker_sex = pd.read_csv(os.path.join(self.directory, self.speaker_sex))
                 self.data = self.data.merge(self.speaker_sex, how = "left", on = ["speaker"])
             
             self.data["sound_obj"] = self.data.apply(lambda row: parselmouth.Sound(row["wavpath"]), axis = 1)
@@ -97,12 +97,13 @@ class Analyzer():
 
             self.output_data = self.data[["speaker", "utterance", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion", "v1_rms", "v1_tilt", "v1_cog", "tool_duration", "target_duration", "ratio_word_duration"]]
 
-            if os.path.isfile(os.path.join(self.directory, self.outfile)) or os.path.isfile(self.outfile):
-                input_df = pd.read_csv(self.outfile)
+            if os.path.isfile(os.path.join(self.directory, self.outfile)):
+                input_df = pd.read_csv(os.path.join(self.directory, self.outfile))
+                input_df = input_df.astype({"speaker": "object", "utterance": "object"})
             
                 output_df = input_df.merge(self.output_data, how = "left", on = ["speaker", "utterance"])
                 
-                with open(self.outfile, "w+") as outfile:
+                with open(os.path.join(self.directory, self.outfile), "w+") as outfile:
                     output_df.to_csv(outfile, sep = ",")
                 
             else:
@@ -208,9 +209,9 @@ class Analyzer():
                     formant_obj = None
                     
                     if "sex" in self.data.columns:
-                        if row["sex"] is "m":
+                        if row["sex"] == "m":
                             formant_obj = row["sound_obj"].to_formant_burg(maximum_formant = 5000.0)
-                        elif row["sex"] is "f":
+                        elif row["sex"] == "f":
                             formant_obj = row["sound_obj"].to_formant_burg(maximum_formant = 5500.0)
                         
                     else:
