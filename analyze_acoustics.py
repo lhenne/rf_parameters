@@ -49,8 +49,21 @@ class Analyzer():
                 self.get_formants()
             
             if self.method_calls[2]:
+                
+                if not self.method_calls[1]:
+                    raise Exception("Formant dispersion measurement requires formants to be calculated as well.")
+                
                 self.data = self.data.assign(f1_f2_dispersion = np.nan, f2_f3_dispersion = np.nan)
                 self.get_formant_dispersions()
+                
+            if self.method_calls[3]:
+                
+                if not self.method_calls[0]:
+                    raise Exception("RMS calculation requires vowel durations to be calculated as well.")
+                
+                self.data = self.data.assign(v1_rms = np.nan)
+                self.get_rms()
+                
         else:
             print("Nothing performed. Exiting.")        
     
@@ -190,24 +203,23 @@ class Analyzer():
             raise TypeError("Please provide a DataFrame containing formant data.")
         
         
-def get_rms(dataset):
+    def get_rms(self):
     
-    """
-    Calculate the root-mean-square energy over the duration of the vowel.
-    """
-    
-    if isinstance(dataset, pd.DataFrame) and all(col in dataset.columns for col in ["v1_rms", "v1_start", "v1_end", "sound_obj"]):
-        for i, row in tqdm(dataset.iterrows(), desc="Calculating vowel RMS", total = len(self.data), leave = True, position = 0):
-            if isinstance(row["sound_obj"], parselmouth.Sound):
-                self.data.loc[i, "v1_rms"] = row["sound_obj"].get_root_mean_square(from_time = row["v1_start"], to_time = row["v1_end"])
-            
-            else:
-                warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
-        return dataset
-    
-    else:        
-        raise TypeError("Please provide a DataFrame containing vowel data.")
-    
+        """
+        Calculate the root-mean-square energy over the duration of the vowel.
+        """
+        
+        if isinstance(self.data, pd.DataFrame) and all(col in self.data.columns for col in ["v1_rms", "v1_start", "v1_end", "sound_obj"]):
+            for i, row in tqdm(self.data.iterrows(), desc="Calculating vowel RMS", total = len(self.data), leave = True, position = 0):
+                if isinstance(row["sound_obj"], parselmouth.Sound):
+                    self.data.loc[i, "v1_rms"] = row["sound_obj"].get_root_mean_square(from_time = row["v1_start"], to_time = row["v1_end"])
+                
+                else:
+                    warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
+        
+        else:        
+            raise TypeError("Please provide a DataFrame containing vowel data.")
+        
 
 def get_spectral_tilt(dataset):
     
