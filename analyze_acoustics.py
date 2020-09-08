@@ -8,6 +8,32 @@ import warnings
 from tqdm import tqdm
 
 
+class Analyzer():
+    """
+    Main class, initialization calls included analysis methods, depending on user input.
+    """
+    
+    def __init__(self) -> None:
+        self.inputdir = input("Input path, containing Praat TextGrids and sound files in sub-folders: ")
+        self.method_calls = list()
+
+        method_prompts = ["Get vowel durations? [y/n]", "Get formant averages? [y/n]" "Get formant dispersions per speaker? [y/n]", "Get RMS values? [y/n]", "Get spectral tilt? [y/n]", "Get center of gravity? [y/n]", "Get word durations? [y/n]"] 
+        
+        for i in range(len(method_prompts)):
+            call_method = input(method_prompts[i])
+            
+            if call_method is "y" or call_method is "":
+                self.method_calls += True
+            else:
+                self.method_calls += False
+                
+        if any(self.method_calls):
+            # Run collect_from_directory
+            
+    
+    
+
+
 def collect_from_directory(directory):
 
     cwd = os.getcwd()
