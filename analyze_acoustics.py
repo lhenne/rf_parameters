@@ -47,6 +47,10 @@ class Analyzer():
             if self.method_calls[1]:
                 self.data = self.data.assign(f1 = np.nan, f2 = np.nan, f3 = np.nan)
                 self.get_formants()
+            
+            if self.method_calls[2]:
+                self.data = self.data.assign(f1_f2_dispersion = np.nan, f2_f3_dispersion = np.nan)
+                self.get_formant_dispersions()
         else:
             print("Nothing performed. Exiting.")        
     
@@ -156,37 +160,36 @@ class Analyzer():
             raise TypeError("Please provide a DataFrame containing a column of V1 segment sound data.")
         
 
-def get_formant_dispersions(dataset):
-    
-    """
-    Use the formant measurements from `get_formants()` to calculate formant dispersion for each speaker
-    """
-    
-    if isinstance(dataset, pd.DataFrame) and all(col in dataset.columns for col in ["f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"]):
-        for speaker in dataset["speaker"].unique():
-            recordings = dataset.loc[dataset["speaker"] == speaker, ["f1", "f2", "f3"]]
-            f1s = list(recordings["f1"].dropna())
-            f2s = list(recordings["f2"].dropna())
-            f3s = list(recordings["f3"].dropna())
-            
-            if not len(f1s) == len(f2s) == len(f3s):
-                warnings.warn("There are more formants of one kind than of another.", UserWarning)
-                        
-            formant_count = max(len(f1s), len(f2s), len(f3s))
-            
-            if not formant_count == len(recordings):
-                warnings.warn("One or more recordings do not have any corresponding formant values.")
-            
-            f1_f2_dispersion = sum([f2s[i] - f1s[i] for i in range(formant_count)]) / (formant_count - 1)
-            f2_f3_dispersion = sum([f3s[i] - f2s[i] for i in range(formant_count)]) / (formant_count - 1)
-            
-            dataset.loc[dataset["speaker"] == speaker, "f1_f2_dispersion"] = f1_f2_dispersion
-            dataset.loc[dataset["speaker"] == speaker, "f2_f3_dispersion"] = f2_f3_dispersion
-
-            return dataset
-    else:
-        raise TypeError("Please provide a DataFrame containing formant data.")
-    
+    def get_formant_dispersions(self):
+        
+        """
+        Use the formant measurements from `get_formants()` to calculate formant dispersion for each speaker
+        """
+        
+        if isinstance(self.data, pd.DataFrame) and all(col in self.data.columns for col in ["f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"]):
+            for speaker in tqdm(self.data["speaker"].unique(), desc="Calculating formant dispersions for each speaker", total = len(self.data), leave = True, position = 0):
+                recordings = self.data.loc[self.data["speaker"] == speaker, ["f1", "f2", "f3"]]
+                f1s = list(recordings["f1"].dropna())
+                f2s = list(recordings["f2"].dropna())
+                f3s = list(recordings["f3"].dropna())
+                
+                if not len(f1s) == len(f2s) == len(f3s):
+                    warnings.warn("There are more formants of one kind than of another.", UserWarning)
+                            
+                formant_count = max(len(f1s), len(f2s), len(f3s))
+                
+                if not formant_count == len(recordings):
+                    warnings.warn("One or more recordings do not have any corresponding formant values.")
+                
+                f1_f2_dispersion = sum([f2s[i] - f1s[i] for i in range(formant_count)]) / (formant_count - 1)
+                f2_f3_dispersion = sum([f3s[i] - f2s[i] for i in range(formant_count)]) / (formant_count - 1)
+                
+                self.data.loc[self.data["speaker"] == speaker, "f1_f2_dispersion"] = f1_f2_dispersion
+                self.data.loc[self.data["speaker"] == speaker, "f2_f3_dispersion"] = f2_f3_dispersion
+        else:
+            raise TypeError("Please provide a DataFrame containing formant data.")
+        
+        
 def get_rms(dataset):
     
     """
