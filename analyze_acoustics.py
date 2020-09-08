@@ -8,6 +8,11 @@ import warnings
 from tqdm import tqdm
 
 
+def custom_warning(message, category, filename, lineno, line = None):
+    return "{}:{}: {}: {}\n".format(filename, lineno, category.__name__, message)
+warnings.formatwarning = custom_warning
+
+
 class Analyzer():
     """
     Main class, initialization calls included analysis methods, depending on user input.
