@@ -35,7 +35,7 @@ class Analyzer():
         self.outfile = input("Output file, CSV to create or append to: ")
         
         if any(self.method_calls):
-            self.data = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath"])
+            self.data = pd.DataFrame(columns = ["speaker", "utterance", "filepath", "wavpath"])
             self.collection = self.collect_from_directory()
             
             self.data["sound_obj"] = self.data.apply(lambda row: parselmouth.Sound(row["wavpath"]), axis = 1)
@@ -88,6 +88,18 @@ class Analyzer():
                 
                 self.data = self.data.assign(tool_duration = np.nan, target_duration = np.nan, ratio_word_duration = np.nan)
                 self.get_word_durations()
+
+            if os.path.isfile(os.path.join(os.getcwd(), self.outfile)) or os.path.isfile(self.outfile):
+                input_df = pd.read_csv(self.outfile)
+            
+                output_df = input_df.merge(self.data, how = "left", on = ["speaker", "utterance"])
+                
+                with open(self.outfile, "w+") as outfile:
+                    output_df.to_csv(outfile, sep = ",")
+                
+            else:
+                with open(os.path.join(self.directory, self.outfile), "w+") as outfile:
+                    self.data.to_csv(outfile, sep = ",")
             
         else:
             print("No operations performed. Exiting.")        
@@ -117,7 +129,7 @@ class Analyzer():
                     
                 self.data["filepath"] = pd.concat({k: pd.Series(v) for k, v in collected_items.items()})
                 self.data["wavpath"] = ["".join([filepath.split(".TextGrid")[0], ".wav"]) for filepath in self.data["filepath"]]
-                self.data["recording"] = [filepath.split("/")[-1].split(".TextGrid")[0] for filepath in self.data["filepath"]]
+                self.data["utterance"] = [filepath.split("/")[-1].split(".TextGrid")[0] for filepath in self.data["filepath"]]
                 
                 index_tup = self.data.index
                 self.data["speaker"] = [tup[0] for tup in index_tup]
@@ -162,17 +174,17 @@ class Analyzer():
                             
                         else:
                             self.data.loc[i, ["v1_start", "v1_end", "v1_duration"]] = [np.nan, np.nan, np.nan]
-                            warnings.warn("{}-{} is missing a V1 annotation or the V1 annotation could not be automatically determined.".format(row["speaker"], row["recording"]), UserWarning)
+                            warnings.warn("{}-{} is missing a V1 annotation or the V1 annotation could not be automatically determined.".format(row["speaker"], row["utterance"]), UserWarning)
                 
                 if found_vowel_tier is False:
-                    warnings.warn("{}-{} does not contain Vowel tier.".format(row["speaker"], row["recording"]), UserWarning)
+                    warnings.warn("{}-{} does not contain Vowel tier.".format(row["speaker"], row["utterance"]), UserWarning)
                 else:
                     pass
                 
-            self.data.sort_values("recording")
+            self.data.sort_values("utterance")
         
         else:
-            raise TypeError("Please provide a dictionary-type collection of recordings and a pandas DataFrame for the output.")
+            raise TypeError("Please provide a dictionary-type collection of utterances and a pandas DataFrame for the output.")
     
     def get_formants(self):
 
@@ -191,9 +203,9 @@ class Analyzer():
                     self.data.loc[i, "f3"] = praat.call(formant_obj, "Get mean", 3, row["v1_start"], row["v1_end"], "Hertz")
                     
                 else:
-                    warnings.warn("Skipping formant measurement for {}-{}: missing V1 segment sound data.".format(row["speaker"], row ["recording"]), UserWarning)
+                    warnings.warn("Skipping formant measurement for {}-{}: missing V1 segment sound data.".format(row["speaker"], row ["utterance"]), UserWarning)
                     
-            self.data.sort_values("recording")
+            self.data.sort_values("utterance")
             
         else:
             raise TypeError("Please provide a DataFrame containing a column of V1 segment sound data.")
@@ -207,18 +219,18 @@ class Analyzer():
         
         if isinstance(self.data, pd.DataFrame) and all(col in self.data.columns for col in ["f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"]):
             for speaker in tqdm(self.data["speaker"].unique(), desc="Calculating formant dispersions for each speaker", total = len(self.data["speaker"].unique()), leave = True, position = 0):
-                recordings = self.data.loc[self.data["speaker"] == speaker, ["f1", "f2", "f3"]]
-                f1s = list(recordings["f1"].dropna())
-                f2s = list(recordings["f2"].dropna())
-                f3s = list(recordings["f3"].dropna())
+                utterances = self.data.loc[self.data["speaker"] == speaker, ["f1", "f2", "f3"]]
+                f1s = list(utterances["f1"].dropna())
+                f2s = list(utterances["f2"].dropna())
+                f3s = list(utterances["f3"].dropna())
                 
                 if not len(f1s) == len(f2s) == len(f3s):
                     warnings.warn("There are more formants of one kind than of another.", UserWarning)
                             
                 formant_count = max(len(f1s), len(f2s), len(f3s))
                 
-                if not formant_count == len(recordings):
-                    warnings.warn("One or more recordings do not have any corresponding formant values.")
+                if not formant_count == len(utterances):
+                    warnings.warn("One or more utterances do not have any corresponding formant values.")
                 
                 f1_f2_dispersion = sum([f2s[i] - f1s[i] for i in range(formant_count)]) / (formant_count - 1)
                 f2_f3_dispersion = sum([f3s[i] - f2s[i] for i in range(formant_count)]) / (formant_count - 1)
@@ -241,7 +253,7 @@ class Analyzer():
                     self.data.loc[i, "v1_rms"] = row["sound_obj"].get_root_mean_square(from_time = row["v1_start"], to_time = row["v1_end"])
                 
                 else:
-                    warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
+                    warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["utterance"]), UserWarning)
         
         else:        
             raise TypeError("Please provide a DataFrame containing vowel data.")
@@ -265,7 +277,7 @@ class Analyzer():
                     self.data.loc[i, "v1_obj"] = v1_obj
                     self.data.loc[i, "v1_tilt"] = v1_tilt
                 else:
-                    warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
+                    warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["utterance"]), UserWarning)
 
         else: 
             raise TypeError("Please provide a DataFrame containing vowel data.")
@@ -289,7 +301,7 @@ class Analyzer():
                         self.data.loc[i, "v1_cog"] = v1_obj.to_spectrum().get_centre_of_gravity()
                         
                     else:
-                        warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
+                        warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["utterance"]), UserWarning)
         
         else: 
             raise TypeError("Please provide a DataFrame containing vowel data.")
@@ -329,10 +341,10 @@ class Analyzer():
                             self.data.loc[i, ["tool_duration", "target_duration", "ratio_word_duration"]] = [tool_duration, target_duration, ratio_word_duration]
                             
                         else:
-                            warnings.warn("{}-{} is missing word annotations or the word annotations could not be automatically determined.".format(row["speaker"], row["recording"]), UserWarning)
+                            warnings.warn("{}-{} is missing word annotations or the word annotations could not be automatically determined.".format(row["speaker"], row["utterance"]), UserWarning)
                     
                 if found_word_tier is False:
-                    warnings.warn("{}-{} does not contain Word tier.".format(row["speaker"], row["recording"]), UserWarning)
+                    warnings.warn("{}-{} does not contain Word tier.".format(row["speaker"], row["utterance"]), UserWarning)
                 else:
                     pass
         
