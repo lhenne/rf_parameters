@@ -33,10 +33,15 @@ class Analyzer():
                 self.method_calls.append(False)
         
         self.outfile = input("Output file, CSV to create or append to: ")
+        self.speaker_sex = input("CSV Table specifying speaker sex: ")
         
         if any(self.method_calls):
             self.data = pd.DataFrame(columns = ["speaker", "utterance", "filepath", "wavpath"])
             self.collection = self.collect_from_directory()
+            
+            if os.path.isfile(os.path.join(self.directory, self.speaker_sex)) or os.path.isfile(self.speaker_sex):
+                self.speaker_sex = pd.read_csv(self.speaker_sex)
+                self.data = self.data.merge(self.speaker_sex, how = "left", on = ["speaker"])
             
             self.data["sound_obj"] = self.data.apply(lambda row: parselmouth.Sound(row["wavpath"]), axis = 1)
             
@@ -89,10 +94,11 @@ class Analyzer():
                 self.data = self.data.assign(tool_duration = np.nan, target_duration = np.nan, ratio_word_duration = np.nan)
                 self.get_word_durations()
 
-            if os.path.isfile(os.path.join(os.getcwd(), self.outfile)) or os.path.isfile(self.outfile):
+
+            self.output_data = self.data[["speaker", "utterance", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion", "v1_rms", "v1_tilt", "v1_cog", "tool_duration", "target_duration", "ratio_word_duration"]]
+
+            if os.path.isfile(os.path.join(self.directory, self.outfile)) or os.path.isfile(self.outfile):
                 input_df = pd.read_csv(self.outfile)
-                
-                self.output_data = self.data[["speaker", "utterance", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion", "v1_rms", "v1_tilt", "v1_cog", "tool_duration", "target_duration", "ratio_word_duration"]]
             
                 output_df = input_df.merge(self.output_data, how = "left", on = ["speaker", "utterance"])
                 
@@ -101,7 +107,7 @@ class Analyzer():
                 
             else:
                 with open(os.path.join(self.directory, self.outfile), "w+") as outfile:
-                    self.data.to_csv(outfile, sep = ",")
+                    self.output_data.to_csv(outfile, sep = ",")
             
         else:
             print("No operations performed. Exiting.")        
@@ -198,7 +204,17 @@ class Analyzer():
             
             for i, row in tqdm(self.data.iterrows(), desc="Extracting V1 formant averages", total = len(self.data), leave = True, position = 0):
                 if isinstance(row["sound_obj"], parselmouth.Sound) and not np.isnan(row["v1_start"]):
-                    formant_obj = row["sound_obj"].to_formant_burg(maximum_formant = 5000.0)
+                    
+                    formant_obj = None
+                    
+                    if "sex" in self.data.columns:
+                        if row["sex"] is "m":
+                            formant_obj = row["sound_obj"].to_formant_burg(maximum_formant = 5000.0)
+                        elif row["sex"] is "f":
+                            formant_obj = row["sound_obj"].to_formant_burg(maximum_formant = 5500.0)
+                        
+                    else:
+                        formant_obj = row["sound_obj"].to_formant_burg(maximum_formant = 5500.0)
                     
                     self.data.loc[i, "f1"] = praat.call(formant_obj, "Get mean", 1, row["v1_start"], row["v1_end"], "Hertz")
                     self.data.loc[i, "f2"] = praat.call(formant_obj, "Get mean", 2, row["v1_start"], row["v1_end"], "Hertz")
