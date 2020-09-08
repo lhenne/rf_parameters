@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock
 
 from numpy.lib.function_base import place
 from analyze_acoustics import *
@@ -504,3 +505,26 @@ class GetWordDurationsTest(unittest.TestCase):
         
         with self.assertWarns(UserWarning):
             get_word_durations(output_df)
+            
+            
+class RunAllAnalysis(unittest.TestCase):
+    
+    """
+    Can all functions be run on the basis of a single input command?
+    """
+    
+    def test_get_user_input(self):
+        """
+        Is user input stored correctly?
+        """
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "y", "y", "y", "y", "y", "y", "test_material/everything.csv"]
+        
+        tester = Analyzer()
+        
+        for _ in range(9):
+            mock_input()
+
+        self.assertTrue("test_material/" == tester.inputdir)
+        self.assertTrue("test_material/everything.csv" == tester.outfile)
+        
