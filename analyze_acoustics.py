@@ -139,18 +139,18 @@ class Analyzer():
         
         if isinstance(self.data, pd.DataFrame) and "sound_obj" in self.data.columns:
             
-            for _, row in tqdm(self.data.iterrows(), desc="Extracting V1 formant averages", total = len(self.data), leave = True, position = 0):
+            for i, row in tqdm(self.data.iterrows(), desc="Extracting V1 formant averages", total = len(self.data), leave = True, position = 0):
                 if isinstance(row["sound_obj"], parselmouth.Sound) and not np.isnan(row["v1_start"]):
                     formant_obj = row["sound_obj"].to_formant_burg(maximum_formant = 5000.0)
                     
-                    row["f1"] = praat.call(formant_obj, "Get mean", 1, row["v1_start"], row["v1_end"], "Hertz")
-                    row["f2"] = praat.call(formant_obj, "Get mean", 2, row["v1_start"], row["v1_end"], "Hertz")
-                    row["f3"] = praat.call(formant_obj, "Get mean", 3, row["v1_start"], row["v1_end"], "Hertz")
+                    self.data.loc[i, "f1"] = praat.call(formant_obj, "Get mean", 1, row["v1_start"], row["v1_end"], "Hertz")
+                    self.data.loc[i, "f2"] = praat.call(formant_obj, "Get mean", 2, row["v1_start"], row["v1_end"], "Hertz")
+                    self.data.loc[i, "f3"] = praat.call(formant_obj, "Get mean", 3, row["v1_start"], row["v1_end"], "Hertz")
                     
                 else:
                     warnings.warn("Skipping formant measurement for {}-{}: missing V1 segment sound data.".format(row["speaker"], row ["recording"]), UserWarning)
                     
-            return self.data.sort_values("recording")
+            self.data.sort_values("recording")
             
         else:
             raise TypeError("Please provide a DataFrame containing a column of V1 segment sound data.")
@@ -194,9 +194,9 @@ def get_rms(dataset):
     """
     
     if isinstance(dataset, pd.DataFrame) and all(col in dataset.columns for col in ["v1_rms", "v1_start", "v1_end", "sound_obj"]):
-        for _, row in tqdm(dataset.iterrows(), desc="Calculating vowel RMS", total = len(self.data), leave = True, position = 0):
+        for i, row in tqdm(dataset.iterrows(), desc="Calculating vowel RMS", total = len(self.data), leave = True, position = 0):
             if isinstance(row["sound_obj"], parselmouth.Sound):
-                row["v1_rms"] = row["sound_obj"].get_root_mean_square(from_time = row["v1_start"], to_time = row["v1_end"])
+                self.data.loc[i, "v1_rms"] = row["sound_obj"].get_root_mean_square(from_time = row["v1_start"], to_time = row["v1_end"])
             
             else:
                 warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
@@ -215,11 +215,11 @@ def get_spectral_tilt(dataset):
     """
     
     if isinstance(dataset, pd.DataFrame) and all(col in dataset.columns for col in ["sound_obj", "v1_start", "v1_end", "v1_obj", "v1_mfcc", "v1_tilt"]):
-        for _, row in tqdm(dataset.iterrows(), desc = "Extracting V1 audio part, creating MFCC object and extracting mean C1.", total = len(self.data), leave = True, position = 0):
+        for i, row in tqdm(dataset.iterrows(), desc = "Extracting V1 audio part, creating MFCC object and extracting mean C1.", total = len(self.data), leave = True, position = 0):
             if isinstance(row["sound_obj"], parselmouth.Sound):
-                row["v1_obj"] = row["sound_obj"].extract_part(from_time = row["v1_start"], to_time = row["v1_end"])
-                row["v1_mfcc"] = row["v1_obj"].to_mfcc(number_of_coefficients = 1)
-                row["v1_tilt"] = np.mean(row["v1_mfcc"].to_array()[1])
+                self.data.loc[i, "v1_obj"] = row["sound_obj"].extract_part(from_time = row["v1_start"], to_time = row["v1_end"])
+                self.data.loc[i, "v1_mfcc"] = self.data.loc[i, "v1_obj"].to_mfcc(number_of_coefficients = 1)
+                self.data.loc[i, "v1_tilt"] = np.mean(self.data.loc[i, "v1_mfcc"].to_array()[1])
                 
             else:
                 warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
@@ -237,9 +237,9 @@ def get_center_of_gravity(dataset):
     """
     
     if isinstance(dataset, pd.DataFrame) and all(col in dataset.columns for col in ["sound_obj", "v1_start", "v1_end", "v1_obj", "v1_mfcc", "v1_tilt", "v1_cog"]):
-        for _, row in tqdm(dataset.iterrows(), desc = "Creating Spectrum object and extracting center of gravity.", total = len(self.data), leave = True, position = 0):
+        for i, row in tqdm(dataset.iterrows(), desc = "Creating Spectrum object and extracting center of gravity.", total = len(self.data), leave = True, position = 0):
             if isinstance(row["v1_obj"], parselmouth.Sound):
-                row["v1_cog"] = row["v1_obj"].to_spectrum().get_centre_of_gravity()
+                self.data.loc[i, "v1_cog"] = row["v1_obj"].to_spectrum().get_centre_of_gravity()
     
             else:
                 warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
@@ -256,7 +256,7 @@ def get_word_durations(dataset):
     """
     
     if isinstance(dataset, pd.DataFrame) and all(col in dataset.columns for col in ["filepath", "tool_duration", "target_duration", "ratio_word_duration"]):
-        for _, row in tqdm(dataset.iterrows(), desc = "Calculating word durations and ratio of words durations.", total = len(self.data), leave = True, position = 0):
+        for i, row in tqdm(dataset.iterrows(), desc = "Calculating word durations and ratio of words durations.", total = len(self.data), leave = True, position = 0):
             textgrid = parselmouth.Data.read(row["filepath"])
             
             numtiers = praat.call(textgrid, "Get number of tiers")
@@ -272,13 +272,16 @@ def get_word_durations(dataset):
                     if numintervals == 5:
                         tool_start = praat.call(textgrid, "Get start time of interval", tiernum, 2)
                         tool_end = praat.call(textgrid, "Get end time of interval", tiernum, 2)
-                        row["tool_duration"] = (tool_end - tool_start) * 1000
+                        tool_duration = (tool_end - tool_start) * 1000
                         
                         target_start = praat.call(textgrid, "Get start time of interval", tiernum, 4)
                         target_end = praat.call(textgrid, "Get end time of interval", tiernum, 4)
-                        row["target_duration"] = (target_end - target_start) * 1000
+                        target_duration = (target_end - target_start) * 1000
                         
-                        row["ratio_word_duration"] = row["tool_duration"] / row["target_duration"]
+                        ratio_word_duration = tool_duration / target_duration
+                        
+                        self.data.loc[i, ["tool_duration", "target_duration", "ratio_word_duration"]] = [tool_duration, target_duration, ratio_word_duration]
+                        
                     else:
                         warnings.warn("{}-{} is missing word annotations or the word annotations could not be automatically determined.".format(row["speaker"], row["recording"]), UserWarning)
                 
