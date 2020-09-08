@@ -14,53 +14,58 @@ class Analyzer():
     """
     
     def __init__(self) -> None:
-        self.inputdir = input("Input path, containing Praat TextGrids and sound files in sub-folders: ")
+        self.directory = input("Input path, containing Praat TextGrids and sound files in sub-folders: ")
         self.method_calls = list()
 
-        method_prompts = ["Get vowel durations? [y/n]", "Get formant averages? [y/n]" "Get formant dispersions per speaker? [y/n]", "Get RMS values? [y/n]", "Get spectral tilt? [y/n]", "Get center of gravity? [y/n]", "Get word durations? [y/n]"] 
+        method_prompts = ["Get vowel durations? [y/n]", "Get formant averages? [y/n]", "Get formant dispersions per speaker? [y/n]", "Get RMS values? [y/n]", "Get spectral tilt? [y/n]", "Get center of gravity? [y/n]", "Get word durations? [y/n]"] 
         
         for i in range(len(method_prompts)):
             call_method = input(method_prompts[i])
             
-            if call_method is "y" or call_method is "":
-                self.method_calls += True
+            if call_method in ["", "y", "Y"]:
+                self.method_calls.append(True)
             else:
-                self.method_calls += False
-                
+                self.method_calls.append(False)
+        
+        self.outfile = input("Output file, CSV to create or append to: ")
+        
         if any(self.method_calls):
-            # Run collect_from_directory
+            self.collection = self.collect_from_directory()
+                    
             
+            
+            
+        else:
+            print("Nothing performed. Exiting.")        
     
     
+    def collect_from_directory(self):
 
+        cwd = os.getcwd()
 
-def collect_from_directory(directory):
+        if self.directory and isinstance(self.directory, str):
+            if os.path.exists(os.path.dirname(self.directory)) or os.path.exists(
+                os.path.join(cwd, self.directory)
+            ):
 
-    cwd = os.getcwd()
+                dir_content = os.listdir(self.directory)
+                collected_items = {
+                    session: np.asarray(glob(os.path.join(self.directory, session, "*.TextGrid"))
+                    )
+                    for session in dir_content
+                }
 
-    if directory and isinstance(directory, str):
-        if os.path.exists(os.path.dirname(directory)) or os.path.exists(
-            os.path.join(cwd, directory)
-        ):
+                return collected_items
 
-            dir_content = os.listdir(directory)
-            collected_items = {
-                session: np.asarray(glob(os.path.join(directory, session, "*.TextGrid"))
-                )
-                for session in dir_content
-            }
+            else:
+                
+                raise ValueError("Please enter a valid path")
 
-            return collected_items
+        elif self.directory:
+            raise TypeError("Please enter a valid path")
 
         else:
-            
-            raise ValueError("Please enter a valid path")
-
-    elif directory:
-        raise TypeError("Please enter a valid path")
-
-    else:
-        raise TypeError("Please enter a valid path")
+            raise TypeError("Please enter a valid path")
     
     
 def get_vowel_duration(collection, output_df):
@@ -279,4 +284,7 @@ def get_word_durations(dataset):
     
     else:
         raise TypeError("Please provide a DataFrame containing the necessary columns.")
-                        
+    
+    
+if __name__ == "__main__":
+    Analyzer()
