@@ -69,9 +69,21 @@ class Analyzer():
                 if not self.method_calls[0]:
                     raise Exception("Spectral tilt calculation requires vowel durations to be calculated as well.")
                 
-                self.data = self.data.assign(v1_obj = np.nan, v1_tilt = np.nan)
+                self.data = self.data.assign(v1_obj = None, v1_tilt = np.nan)
                 self.get_spectral_tilt()
                 
+            if self.method_calls[5]:
+                
+                if not self.method_calls[0]:
+                    raise Exception("Spectral center of gravity calculation requires vowel durations to be calculated as well.")
+               
+                if self.method_calls[4]:
+                    self.data = self.data.assign(v1_cog = np.nan)
+                else:
+                    self.data = self.data.assign(v1_obj = np.nan, v1_cog = np.nan)
+                
+                self.get_center_of_gravity()
+            
         else:
             print("No operations performed. Exiting.")        
     
@@ -142,6 +154,7 @@ class Analyzer():
                             v1_duration = (v1_end - v1_start) * 1000
                             
                             self.data.loc[i, ["v1_start", "v1_end", "v1_duration"]] = [v1_start, v1_end, v1_duration]
+                            
                         else:
                             self.data.loc[i, ["v1_start", "v1_end", "v1_duration"]] = [np.nan, np.nan, np.nan]
                             warnings.warn("{}-{} is missing a V1 annotation or the V1 annotation could not be automatically determined.".format(row["speaker"], row["recording"]), UserWarning)
@@ -239,12 +252,13 @@ class Analyzer():
         
         if isinstance(self.data, pd.DataFrame) and all(col in self.data.columns for col in ["sound_obj", "v1_start", "v1_end", "v1_obj", "v1_tilt"]):
             for i, row in tqdm(self.data.iterrows(), desc = "Extracting V1 audio part, creating MFCC object and extracting mean C1.", total = len(self.data), leave = True, position = 0):
-                if isinstance(row["sound_obj"], parselmouth.Sound):
+                if isinstance(row["sound_obj"], parselmouth.Sound) and not np.isnan(row["v1_start"]):
                     v1_obj = row["sound_obj"].extract_part(from_time = row["v1_start"], to_time = row["v1_end"])
                     v1_mfcc = v1_obj.to_mfcc(number_of_coefficients = 1)
                     v1_tilt = np.mean(v1_mfcc.to_array()[1])
                     
-                    self.data.loc[i, ["v1_obj", "v1_tilt"]] = [v1_obj, v1_tilt]
+                    self.data.loc[i, "v1_obj"] = v1_obj
+                    self.data.loc[i, "v1_tilt"] = v1_tilt
                 else:
                     warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
 
@@ -252,24 +266,28 @@ class Analyzer():
             raise TypeError("Please provide a DataFrame containing vowel data.")
     
 
-def get_center_of_gravity(dataset):
-    
-    """
-    Calculate the center of gravity over the timespan of the V1 label.
-    To extract this value, a Praat Spectrum object has to be calculated.
-    """
-    
-    if isinstance(dataset, pd.DataFrame) and all(col in dataset.columns for col in ["sound_obj", "v1_start", "v1_end", "v1_obj", "v1_mfcc", "v1_tilt", "v1_cog"]):
-        for i, row in tqdm(dataset.iterrows(), desc = "Creating Spectrum object and extracting center of gravity.", total = len(self.data), leave = True, position = 0):
-            if isinstance(row["v1_obj"], parselmouth.Sound):
-                self.data.loc[i, "v1_cog"] = row["v1_obj"].to_spectrum().get_centre_of_gravity()
-    
-            else:
-                warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
+    def get_center_of_gravity(self):
         
-        return dataset
-    
-    else: raise TypeError("Please provide a DataFrame containing vowel data.")
+        """
+        Calculate the center of gravity over the timespan of the V1 label.
+        To extract this value, a Praat Spectrum object has to be calculated.
+        """
+        
+        if isinstance(self.data, pd.DataFrame) and all(col in self.data.columns for col in ["sound_obj", "v1_start", "v1_end", "v1_obj", "v1_cog"]):
+            for i, row in tqdm(self.data.iterrows(), desc = "Creating Spectrum object and extracting center of gravity.", total = len(self.data), leave = True, position = 0):
+                if isinstance(row["v1_obj"], parselmouth.Sound):
+                    self.data.loc[i, "v1_cog"] = row["v1_obj"].to_spectrum().get_centre_of_gravity()
+        
+                else:
+                    if not np.isnan(row["v1_start"]):
+                        v1_obj = row["sound_obj"].extract_part(from_time = row["v1_start"], to_time = row["v1_end"])
+                        self.data.loc[i, "v1_cog"] = v1_obj.to_spectrum().get_centre_of_gravity()
+                        
+                    else:
+                        warnings.warn("{}-{} does not contain Vowel tier. NA value inserted.".format(row["speaker"], row["recording"]), UserWarning)
+        
+        else: 
+            raise TypeError("Please provide a DataFrame containing vowel data.")
     
 
 def get_word_durations(dataset):
