@@ -22,7 +22,7 @@ class Analyzer():
         self.directory = input("Input path, containing Praat TextGrids and sound files in sub-folders: ")
         self.method_calls = list()
 
-        method_prompts = ["Get vowel durations? [Y/n]", "Get formant averages? [Y/n]", "Get formant dispersions per speaker? [Y/n]", "Get RMS values? [Y/n]", "Get spectral tilt? [Y/n]", "Get center of gravity? [Y/n]", "Get word durations? [Y/n]"] 
+        method_prompts = ["Get vowel durations? [Y/n]: ", "Get formant averages? [Y/n]: ", "Get formant dispersions per speaker? [Y/n]: ", "Get RMS values? [Y/n]: ", "Get spectral tilt? [Y/n]: ", "Get center of gravity? [Y/n]: ", "Get word durations? [Y/n]: "] 
         
         for i in range(len(method_prompts)):
             call_method = input(method_prompts[i])
@@ -83,6 +83,11 @@ class Analyzer():
                     self.data = self.data.assign(v1_obj = np.nan, v1_cog = np.nan)
                 
                 self.get_center_of_gravity()
+                
+            if self.method_calls[6]:
+                
+                self.data = self.data.assign(tool_duration = np.nan, target_duration = np.nan, ratio_word_duration = np.nan)
+                self.get_word_durations()
             
         else:
             print("No operations performed. Exiting.")        
@@ -290,51 +295,50 @@ class Analyzer():
             raise TypeError("Please provide a DataFrame containing vowel data.")
     
 
-def get_word_durations(dataset):
-    
-    """
-    Get the durations of tool and target word labels, and then calculate the ratio of tool to target.
-    """
-    
-    if isinstance(dataset, pd.DataFrame) and all(col in dataset.columns for col in ["filepath", "tool_duration", "target_duration", "ratio_word_duration"]):
-        for i, row in tqdm(dataset.iterrows(), desc = "Calculating word durations and ratio of words durations.", total = len(self.data), leave = True, position = 0):
-            textgrid = parselmouth.Data.read(row["filepath"])
-            
-            numtiers = praat.call(textgrid, "Get number of tiers")
-            found_word_tier = False
-            
-            for tiernum in range(1, numtiers+1):
-                tiername = praat.call(textgrid, "Get tier name", tiernum)
+    def get_word_durations(self):
+        
+        """
+        Get the durations of tool and target word labels, and then calculate the ratio of tool to target.
+        """
+        
+        if isinstance(self.data, pd.DataFrame) and all(col in self.data.columns for col in ["filepath", "tool_duration", "target_duration", "ratio_word_duration"]):
+            for i, row in tqdm(self.data.iterrows(), desc = "Calculating word durations and ratio of words durations.", total = len(self.data), leave = True, position = 0):
+                textgrid = parselmouth.Data.read(row["filepath"])
                 
-                if tiername == "Word":
-                    found_word_tier = True
-                    numintervals = praat.call(textgrid, "Get number of intervals", tiernum)
+                numtiers = praat.call(textgrid, "Get number of tiers")
+                found_word_tier = False
+                
+                for tiernum in range(1, numtiers+1):
+                    tiername = praat.call(textgrid, "Get tier name", tiernum)
                     
-                    if numintervals == 5:
-                        tool_start = praat.call(textgrid, "Get start time of interval", tiernum, 2)
-                        tool_end = praat.call(textgrid, "Get end time of interval", tiernum, 2)
-                        tool_duration = (tool_end - tool_start) * 1000
+                    if tiername == "Word":
+                        found_word_tier = True
+                        numintervals = praat.call(textgrid, "Get number of intervals", tiernum)
                         
-                        target_start = praat.call(textgrid, "Get start time of interval", tiernum, 4)
-                        target_end = praat.call(textgrid, "Get end time of interval", tiernum, 4)
-                        target_duration = (target_end - target_start) * 1000
-                        
-                        ratio_word_duration = tool_duration / target_duration
-                        
-                        self.data.loc[i, ["tool_duration", "target_duration", "ratio_word_duration"]] = [tool_duration, target_duration, ratio_word_duration]
-                        
-                    else:
-                        warnings.warn("{}-{} is missing word annotations or the word annotations could not be automatically determined.".format(row["speaker"], row["recording"]), UserWarning)
-                
-            if found_word_tier is False:
-                warnings.warn("{}-{} does not contain Word tier.".format(row["speaker"], row["recording"]), UserWarning)
-            else:
-                pass
-        return dataset
-    
-    else:
-        raise TypeError("Please provide a DataFrame containing the necessary columns.")
-    
+                        if numintervals == 5:
+                            tool_start = praat.call(textgrid, "Get start time of interval", tiernum, 2)
+                            tool_end = praat.call(textgrid, "Get end time of interval", tiernum, 2)
+                            tool_duration = (tool_end - tool_start) * 1000
+                            
+                            target_start = praat.call(textgrid, "Get start time of interval", tiernum, 4)
+                            target_end = praat.call(textgrid, "Get end time of interval", tiernum, 4)
+                            target_duration = (target_end - target_start) * 1000
+                            
+                            ratio_word_duration = tool_duration / target_duration
+                            
+                            self.data.loc[i, ["tool_duration", "target_duration", "ratio_word_duration"]] = [tool_duration, target_duration, ratio_word_duration]
+                            
+                        else:
+                            warnings.warn("{}-{} is missing word annotations or the word annotations could not be automatically determined.".format(row["speaker"], row["recording"]), UserWarning)
+                    
+                if found_word_tier is False:
+                    warnings.warn("{}-{} does not contain Word tier.".format(row["speaker"], row["recording"]), UserWarning)
+                else:
+                    pass
+        
+        else:
+            raise TypeError("Please provide a DataFrame containing the necessary columns.")
+        
     
 if __name__ == "__main__":
     Analyzer()
