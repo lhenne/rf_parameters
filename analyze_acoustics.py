@@ -94,21 +94,24 @@ class Analyzer():
                 self.data = self.data.assign(tool_duration = np.nan, target_duration = np.nan, ratio_word_duration = np.nan)
                 self.get_word_durations()
 
-
-            self.output_data = self.data[["speaker", "utterance", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion", "v1_rms", "v1_tilt", "v1_cog", "tool_duration", "target_duration", "ratio_word_duration"]]
+            drop_cols = ["filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end"]
+            for col in drop_cols:
+                if col in self.data.columns:
+                    self.data = self.data.drop(columns=col, axis=1)
 
             if os.path.isfile(os.path.join(self.directory, self.outfile)):
                 input_df = pd.read_csv(os.path.join(self.directory, self.outfile))
-                input_df = input_df.astype({"speaker": "object", "utterance": "object"})
-            
-                output_df = input_df.merge(self.output_data, how = "left", on = ["speaker", "utterance"])
+                input_df = input_df.astype({"speaker": "object", "utterance": "int32"})
+                self.data = self.data.astype({"speaker": "object", "utterance": "int32"})
+                
+                output_df = input_df.merge(self.data, how = "inner", on = ["speaker", "utterance"])
                 
                 with open(os.path.join(self.directory, self.outfile), "w+") as outfile:
                     output_df.to_csv(outfile, sep = ",")
                 
             else:
                 with open(os.path.join(self.directory, self.outfile), "w+") as outfile:
-                    self.output_data.to_csv(outfile, sep = ",")
+                    self.data.to_csv(outfile, sep = ",")
             
         else:
             print("No operations performed. Exiting.")        
