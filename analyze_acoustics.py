@@ -6,6 +6,7 @@ from glob import glob
 import os
 import warnings
 from tqdm import tqdm
+import math
 
 
 def custom_warning(message, category, filename, lineno, line=None):
@@ -34,6 +35,7 @@ class Analyzer:
             "Get spectral tilt? [Y/n]: ",
             "Get center of gravity? [Y/n]: ",
             "Get word durations? [Y/n]: ",
+            "Get target and peak height relative to low end? [Y/n]"
         ]
 
         for i in range(len(method_prompts)):
@@ -73,6 +75,7 @@ class Analyzer:
                 self.get_vowel_duration()
 
             if self.method_calls[1]:
+                # TODO: Failsafe if method_calls[0] == False              
                 self.data = self.data.assign(f1=np.nan, f2=np.nan, f3=np.nan)
                 self.get_formants()
 
@@ -127,10 +130,18 @@ class Analyzer:
                 self.data = self.data.assign(
                     tool_duration=np.nan,
                     target_duration=np.nan,
-                    ratio_word_duration=np.nan,
+                    ratio_word_duration=np.nan
                 )
                 self.get_word_durations()
-
+            
+            if self.method_calls[7]:
+                
+                self.data = self.data.assign(
+                    target_low_end=np.nan,
+                    peak_low_end=np.nan
+                )
+                self.get_relative_heights()
+                
             drop_cols = [
                 "filepath",
                 "wavpath",
@@ -240,11 +251,11 @@ class Analyzer:
 
                     if tiername == "Vowel":
                         found_vowel_tier = True
-                        numintervals = praat.call(
+                        num_intervals = praat.call(
                             textgrid, "Get number of intervals", tiernum
                         )
 
-                        if numintervals == 3:
+                        if num_intervals == 3:
                             v1_start = praat.call(
                                 textgrid, "Get start time of interval", tiernum, 2
                             )
@@ -460,8 +471,7 @@ class Analyzer:
         """
 
         if isinstance(self.data, pd.DataFrame) and all(
-            col in self.data.columns
-            for col in ["sound_obj", "v1_start", "v1_end", "v1_obj", "v1_tilt"]
+            col in self.data.columns for col in ["sound_obj", "v1_start", "v1_end", "v1_obj", "v1_tilt"]
         ):
             for i, row in tqdm(
                 self.data.iterrows(),
@@ -567,11 +577,11 @@ class Analyzer:
 
                     if tiername == "Word":
                         found_word_tier = True
-                        numintervals = praat.call(
+                        num_intervals = praat.call(
                             textgrid, "Get number of intervals", tiernum
                         )
 
-                        if numintervals == 5:
+                        if num_intervals == 5:
                             tool_start = praat.call(
                                 textgrid, "Get start time of interval", tiernum, 2
                             )
@@ -622,6 +632,79 @@ class Analyzer:
                 "Please provide a DataFrame containing the necessary columns."
             )
 
+    def get_relative_heights(self):
+        
+        """
+        Calculate the relative heights for target labels (second tone label) and peak labels ("H" tone label), compared to the low end ("L%")
+        """
+        
+        if isinstance(self.data, pd.DataFrame) and all(
+            col in self.data.columns
+            for col in [
+                "filepath",
+                "sound_obj",
+                "target_low_end",
+                "peak_low_end"
+            ]
+        ):
+            for i, row in tqdm(
+                self.data.iterrows(),
+                desc="Calculating relative target and peak heights.",
+                total=len(self.data),
+                leave=True,
+                position=0,
+            ):
+                textgrid = parselmouth.Data.read(row["filepath"])
+
+                numtiers = praat.call(textgrid, "Get number of tiers")
+                found_tone_tier = False
+
+                for tiernum in range(1, numtiers + 1):
+                    tiername = praat.call(textgrid, "Get tier name", tiernum)
+
+                    if tiername == "f0":
+                        found_tone_tier = True
+                        num_labels = praat.call(
+                            textgrid, "Get number of points", tiernum
+                        )
+                    
+                        if num_labels == 3:
+                            pitch_obj = row["sound_obj"].to_pitch()
+                            
+                            labels = [praat.call(textgrid, "Get label of point", tiernum, point) for point in range(1, num_labels + 1)]
+                            
+                            timestamps = [praat.call(textgrid, "Get time of point", tiernum, point) for point in range(1, num_labels + 1)]
+                            
+                            f0s = [pitch_obj.get_value_at_time(timestamp) for timestamp in timestamps]
+                            
+                            row["target_low_end"] = 12 * math.log2(f0s[1] / f0s[2])
+                            
+                            peak = labels.index("L-%")
+                            row["peak_low_end"] = 12 * math.log2(f0s[peak] / f0s[2])
+                        
+                        else:
+                            warnings.warn(
+                                "{}-{} is missing word annotations or the word annotations could not be automatically determined.".format(
+                                    row["speaker"], row["utterance"]
+                                ),
+                                UserWarning
+                            )
+
+                if found_tone_tier is False:
+                    warnings.warn(
+                        "{}-{} does not contain tone tier.".format(
+                            row["speaker"], row["utterance"]
+                        ),
+                        UserWarning
+                    )
+                else:
+                    pass
+
+        else:
+            raise TypeError(
+                "Please provide a DataFrame containing the necessary columns."
+            )    
+                    
 
 if __name__ == "__main__":
     Analyzer()
