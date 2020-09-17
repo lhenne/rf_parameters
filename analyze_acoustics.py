@@ -53,7 +53,8 @@ class Analyzer:
             )
             self.collection = self.collect_from_directory()
 
-            if os.path.isfile(os.path.join(self.directory, self.speaker_sex)):
+            speaker_sex_path = os.path.abspath(os.path.join(self.directory, self.speaker_sex))
+            if os.path.isfile(speaker_sex_path):
                 self.speaker_sex = pd.read_csv(
                     os.path.join(self.directory, self.speaker_sex)
                 )
