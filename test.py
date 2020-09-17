@@ -1,530 +1,285 @@
 import unittest
+from unittest import mock
 from unittest.mock import Mock
 
 from numpy.lib.function_base import place
 from analyze_acoustics import *
 
-class CollectFromDirectoryTests(unittest.TestCase):
+class InputTests(unittest.TestCase):
     
-    def test_invalid_type_input(self):
+    def test_invalid_path(self):
         """
-        Do invalid type inputs return an error?
+        Does entering an invalid path (which doesn't exist) return an error?
         """
         
-        for test_case in (20, None, "", True):
-            with self.subTest(test_case):
-                with self.assertRaises(TypeError):
-                    collect_from_directory(test_case)
-                    
-    def test_bad_string_input(self):
-        """
-        Do nonexistent paths as input return an error?
-        """
-        
-        for test_case in ("NotAValidPath", "another/kind/of/invalid", "also-2020ü&not_valid/"):
-            with self.subTest(test_case):
-                with self.assertRaises(ValueError):
-                    collect_from_directory(test_case)
-        
-    
-    def test_correct_output_type(self):
-        """
-        Is the method output a dictionary?
-        """
-        
-        collection = collect_from_directory("test_material/")
-        self.assertIsInstance(collection, dict)
-        
-    def test_correct_output_content(self):
-        """
-        Does example input return the correct output?
-        """
-        
-        collection = collect_from_directory("test_material/")
-        self.assertIn("AH_95", collection.keys())
-        
-        for test_case in ("test_material/AH_95/0018.TextGrid", "test_material/AH_95/0098.TextGrid", "test_material/AH_95/0057.TextGrid"):
-            with self.subTest(test_case):
-                self.assertIn(test_case, collection["AH_95"])
-                
-    def test_file_types_filtered(self):
-        """
-        Does the output dictionary only contain TextGrid files?
-        """
-        
-        collection = collect_from_directory("test_material/")
-        for test_case in ("0018.wav", "0098.wav", "readme.txt"):
-            with self.subTest(test_case):
-                self.assertNotIn(test_case, collection["AH_95"])
-    
-    
-class GetVowelDurationTests(unittest.TestCase):
-    
-    def test_invalid_type_input(self):
-        """
-        Do inputs of invalid data type return an error?
-        """
-        
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration"])
-        
-        for test_case in (None, True, ["AH_95",  ["0018.TextGrid"]], "AH_95: 0018.TextGrid"):
-            with self.subTest(test_case):
-                with self.assertRaises(TypeError):
-                    get_vowel_duration(test_case, output_df)
-    
-    def test_bad_structure_input(self):
-        """
-        Do dictionary inputs with wrong structure return an error?
-        """
-        
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration"])
-        
-        for test_case in ({"AH_95": "0018.TextGrid", "AH_95": "0019.TextGrid"}, {("0018.TextGrid", "0019.TextGrid", "0047.TextGrid"): "AH_95"}):
-            with self.subTest(test_case):
-                with self.assertRaises(TypeError):
-                    get_vowel_duration(test_case, output_df)
-    
-    def test_dataframe_output_type(self):
-        """
-        Does the function output a pandas.DataFrame object?
-        """
-    
-        collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration"])
-        output_df = get_vowel_duration(collection, output_df)
-            
-        self.assertIsInstance(output_df, pd.DataFrame)
-    
-    def test_dataframe_output_values(self):
-        """
-        Does the function extract the correct values?
-        """
-    
-        collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration"])
-        output_df = get_vowel_duration(collection, output_df)
-        
-        value_0018 = output_df.loc[output_df["recording"] == "0018", "v1_duration"].item()  
-        value_0038 = output_df.loc[output_df["recording"] == "0038", "v1_duration"].item()
-        value_0058 = output_df.loc[output_df["recording"] == "0058", "v1_duration"].item()  
-        
-        self.assertAlmostEqual(value_0018, 139.32, places = 1)
-        self.assertAlmostEqual(value_0038, 223.54, places = 1)
-        self.assertAlmostEqual(value_0058, 128.77, places = 1)
-        
-    def test_missing_label(self):
-        """
-        Does the function correctly deal with the one missing V1 label?
-        """
-        
-        collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration"])
-
-        with self.assertWarns(UserWarning):
-            get_vowel_duration(collection, output_df)
-
-
-class GetFormantsTests(unittest.TestCase):
-    
-    def test_dataframe_output_type(self):
-        """
-        Does the function output a pandas.DataFrame object?
-        """
-        collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3"])
-        output_df = get_vowel_duration(collection, output_df)
-        
-        formants_df = get_formants(output_df)
-        
-        self.assertIsInstance(formants_df, pd.DataFrame)
-        
-    def test_missing_label(self):
-        """
-        Does the function warn if the label and V1.wav are missing?
-        """
-        collection = {"AH_95": ["test_material/AH_95/0032.TextGrid"]}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3"])
-        durations_df = get_vowel_duration(collection, output_df)
-        
-        with self.assertWarns(UserWarning):
-            get_formants(durations_df)
-        
-    def test_dataframe_output_values_f1(self):
-        """
-        Does the function return the correct values for F1?
-        """
-        
-        collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3"])
-        output_df = get_vowel_duration(collection, output_df)
-        
-        formants_df = get_formants(output_df)
-        
-        value_0019 = formants_df.loc[formants_df["recording"] == "0019", "f1"].item()  
-        value_0039 = formants_df.loc[formants_df["recording"] == "0039", "f1"].item()
-        value_0059 = formants_df.loc[formants_df["recording"] == "0059", "f1"].item()  
-
-        self.assertAlmostEqual(value_0019, 668.966, places = 1)
-        self.assertAlmostEqual(value_0039, 366.676, places = 1)
-        self.assertAlmostEqual(value_0059, 630.239, places = 1)
-        
-    def test_dataframe_output_values_f2(self):
-        """
-        Does the function return the correct values for F2?
-        """
-        
-        collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3"])
-        output_df = get_vowel_duration(collection, output_df)
-        
-        formants_df = get_formants(output_df)
-        
-        value_0019 = formants_df.loc[formants_df["recording"] == "0019", "f2"].item()  
-        value_0039 = formants_df.loc[formants_df["recording"] == "0039", "f2"].item()
-        value_0059 = formants_df.loc[formants_df["recording"] == "0059", "f2"].item()  
-
-        self.assertAlmostEqual(value_0019, 1134.546, places = 1)
-        self.assertAlmostEqual(value_0039, 775.480, places = 1)
-        self.assertAlmostEqual(value_0059, 1270.054, places = 1)
-        
-    def test_dataframe_output_values_f3(self):
-        """
-        Does the function return the correct values for F2?
-        """
-        
-        collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3"])
-        output_df = get_vowel_duration(collection, output_df)
-        
-        formants_df = get_formants(output_df)
-        
-        value_0019 = formants_df.loc[formants_df["recording"] == "0019", "f3"].item()  
-        value_0039 = formants_df.loc[formants_df["recording"] == "0039", "f3"].item()
-        value_0059 = formants_df.loc[formants_df["recording"] == "0059", "f3"].item()  
-
-        self.assertAlmostEqual(value_0019, 2345.740, places = 1)
-        self.assertAlmostEqual(value_0039, 2758.156, places = 1)
-        self.assertAlmostEqual(value_0059, 2496.351, places = 1)
-        
-    
-class GetFormantDispersionsTest(unittest.TestCase):
-        
-    def test_dataframe_output_type(self):
-        """
-        Does the function output a pandas.DataFrame object?
-        """
-        
-        collection = {"AH_95": np.array(["test_material/AH_95/0022.TextGrid", "test_material/AH_95/0032.TextGrid", "test_material/AH_95/0059.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"])
-        output_df = get_vowel_duration(collection, output_df)
-        formants_df = get_formants(output_df)
-
-        dispersions_df = get_formant_dispersions(formants_df)
-
-        self.assertIsInstance(dispersions_df, pd.DataFrame)
-            
-        
-    def test_missing_label(self):
-        """
-        Does the function warn the user of missing labels?
-        """
-        
-        collection = {"AH_95": np.array(["test_material/AH_95/0018.TextGrid", "test_material/AH_95/0032.TextGrid", "test_material/AH_95/0057.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"])
-        output_df = get_vowel_duration(collection, output_df)
-        formants_df = get_formants(output_df)
-        
-        with self.assertWarns(UserWarning):
-            get_formant_dispersions(formants_df)
-                
-    
-    def test_dataframe_output_values_f1_f2_dispersion(self):
-        """
-        Does the function return the correct values for F1-F2-dispersion?
-        """
-        
-        collection = {"AH_95": np.array(["test_material/AH_95/0018.TextGrid", "test_material/AH_95/0029.TextGrid", "test_material/AH_95/0057.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"])
-        output_df = get_vowel_duration(collection, output_df)
-        formants_df = get_formants(output_df)
-        
-        dispersions_df = get_formant_dispersions(formants_df)
-        
-        self.assertAlmostEqual(dispersions_df.loc[dispersions_df["recording"] == "0018", "f1_f2_dispersion"].item(), 918.424, places = 1)
-        
-    def test_dataframe_output_values_f2_f3_dispersion(self):
-        """
-        Does the function return the correct values for F2-F3-dispersion?
-        """
-        
-        collection =  {"AH_95": np.array(["test_material/AH_95/0018.TextGrid", "test_material/AH_95/0029.TextGrid", "test_material/AH_95/0057.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"])
-        output_df = get_vowel_duration(collection, output_df)
-        formants_df = get_formants(output_df)
-        
-        dispersions_df = get_formant_dispersions(formants_df)
-        
-        self.assertAlmostEqual(dispersions_df.loc[dispersions_df["recording"] == "0018", "f2_f3_dispersion"].item(), 2467.532, places = 1)
-        
-    def test_all_equal(self):
-        """
-        Are the resulting values equal for all recordings of a speaker?
-        """
-        
-        collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "f1", "f2", "f3", "f1_f2_dispersion", "f2_f3_dispersion"])
-        output_df = get_vowel_duration(collection, output_df)
-        formants_df = get_formants(output_df)
-        
-        dispersions_df = get_formant_dispersions(formants_df)
-        
-        f1_f2_values = dispersions_df["f1_f2_dispersion"].to_numpy()
-        f2_f3_values = dispersions_df["f2_f3_dispersion"].to_numpy()
-        
-        self.assertTrue((f1_f2_values[0] == f1_f2_values).all())
-        self.assertTrue((f2_f3_values[0] == f2_f3_values).all())
-   
-        
-class GetRMSTests(unittest.TestCase):
-    
-    def test_dataframe_output_type(self):
-        """
-        Does the function output a pandas.DataFrame object?
-        """
-        
-        collection = {"AH_95": np.array(["test_material/AH_95/0023.TextGrid", "test_material/AH_95/0034.TextGrid", "test_material/AH_95/0055.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "v1_rms"])
-        output_df = get_vowel_duration(collection, output_df)
-
-        rms_df = get_rms(output_df)
-
-        self.assertIsInstance(rms_df, pd.DataFrame)
-        
-    def test_missing_label(self):
-        """
-        Does the function warn the user of missing labels?
-        """
-        
-        collection = {"AH_95": np.array(["test_material/AH_95/0024.TextGrid", "test_material/AH_95/0032.TextGrid", "test_material/AH_95/0060.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "v1_rms"])
-        output_df = get_vowel_duration(collection, output_df)
-        
-        with self.assertWarns(UserWarning):
-            get_rms(output_df)
-            
-    def test_dataframe_output_values(self):
-        """
-        Does the function output the correct RMS values?
-        """
-        
-        collection = {"AH_95": np.array(["test_material/AH_95/0025.TextGrid", "test_material/AH_95/0033.TextGrid", "test_material/AH_95/0061.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_start", "v1_end", "v1_duration", "v1_rms"])
-        output_df = get_vowel_duration(collection, output_df)
-        
-        rms_values = list(get_rms(output_df)["v1_rms"])
-        correct_values = [0.09407199488169092, 0.1048775907277835, 0.10630864064829092]
-        
-        for i in range(3):
-            with self.subTest(i):
-                self.assertAlmostEqual(rms_values[i], correct_values[i], places = 1)
-
-
-class GetSpectralTiltTests(unittest.TestCase):
-    
-    def test_dataframe_output_type(self):
-        """
-        Does the function output a pandas.DataFrame object?
-        """
-        
-        collection = {"AH_95": np.array(["test_material/AH_95/0024.TextGrid", "test_material/AH_95/0035.TextGrid", "test_material/AH_95/0072.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt"])
-        output_df = get_vowel_duration(collection, output_df)
-
-        tilt_df = get_spectral_tilt(output_df)
-
-        self.assertIsInstance(tilt_df, pd.DataFrame)
-        
-    def test_missing_label(self):
-        """
-        Does the function warn the user of missing labels?
-        """
-        
-        collection = {"AH_95": np.array(["test_material/AH_95/0024.TextGrid", "test_material/AH_95/0032.TextGrid", "test_material/AH_95/0060.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt"])
-        output_df = get_vowel_duration(collection, output_df)
-        
-        with self.assertWarns(UserWarning):
-            get_spectral_tilt(output_df)
-    
-    
-    def test_mfcc_object(self):
-        """
-        Does the function generate a parselmouth.Sound and a parselmouth.MFCC object for the V1 timespan correctly?
-        """
-        
-        collection = {"AH_95": np.array(["test_material/AH_95/0024.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt"])
-        output_df = get_vowel_duration(collection, output_df)
-        
-        tilt_df = get_spectral_tilt(output_df)
-        
-        v1_sound = tilt_df.loc[tilt_df["recording"] == "0024", "v1_obj"].item()
-        v1_mfcc = tilt_df.loc[tilt_df["recording"] == "0024", "v1_mfcc"].item()
-        
-        self.assertIsInstance(v1_sound, parselmouth.Sound)
-        self.assertIsInstance(v1_mfcc, parselmouth.MFCC)
-    
-    def test_dataframe_output_values(self):
-        """
-        Does the function calculate the V1 spectral tilt correctly? (mean C1 from the MFCC object)
-        """
-        
-        collection = {"AH_95": np.array(["test_material/AH_95/0029.TextGrid",  "test_material/AH_95/0059.TextGrid", "test_material/AH_95/0079.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt"])
-        output_df = get_vowel_duration(collection, output_df)
-        
-        tilt_df = get_spectral_tilt(output_df)
-        
-        value_0029 = tilt_df.loc[tilt_df["recording"] == "0029", "v1_tilt"].item()
-        value_0059 = tilt_df.loc[tilt_df["recording"] == "0059", "v1_tilt"].item()
-        value_0079 = tilt_df.loc[tilt_df["recording"] == "0079", "v1_tilt"].item()
-        
-        self.assertAlmostEqual(value_0029, 422.068372224925, places = 1)
-        self.assertAlmostEqual(value_0059, 496.260799840674, places = 1)
-        self.assertAlmostEqual(value_0079, 525.309714939446, places = 1)
-        
-
-class GetCenterOfGravityTests(unittest.TestCase):
-    
-    def test_dataframe_output_type(self):
-        """
-        Does the function output a pandas.DataFrame object?
-        """
-        
-        collection = {"AH_95": np.array(["test_material/AH_95/0024.TextGrid", "test_material/AH_95/0035.TextGrid", "test_material/AH_95/0072.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt", "v1_spectrum", "v1_cog"])
-        output_df = get_vowel_duration(collection, output_df)
-        output_df = get_spectral_tilt(output_df)
-        
-        cog_df = get_center_of_gravity(output_df)
-
-        self.assertIsInstance(cog_df, pd.DataFrame)
-        
-    def test_missing_label(self):
-        """
-        Does the function warn the user of missing labels?
-        """
-        
-        collection = {"AH_95": np.array(["test_material/AH_95/0024.TextGrid", "test_material/AH_95/0032.TextGrid", "test_material/AH_95/0060.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt", "v1_spectrum", "v1_cog"])
-        output_df = get_vowel_duration(collection, output_df)
-        output_df = get_spectral_tilt(output_df)
-        
-        with self.assertWarns(UserWarning):
-            get_center_of_gravity(output_df)
-        
-    def test_dataframe_output_values(self):
-        """
-        Does the function output the correct values for the center of gravity?
-        """
-
-        collection = {"AH_95": np.array(["test_material/AH_95/0048.TextGrid", "test_material/AH_95/0053.TextGrid","test_material/AH_95/0082.TextGrid"])}
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_obj", "v1_start", "v1_end", "v1_duration", "v1_mfcc", "v1_tilt", "v1_spectrum", "v1_cog"])
-        output_df = get_vowel_duration(collection, output_df)
-        output_df = get_spectral_tilt(output_df)
-        
-        cog_df = get_center_of_gravity(output_df)
-        
-        value_0048 = cog_df.loc[cog_df["recording"] == "0048", "v1_cog"].item()
-        value_0053 = cog_df.loc[cog_df["recording"] == "0053", "v1_cog"].item()
-        value_0082 = cog_df.loc[cog_df["recording"] == "0082", "v1_cog"].item()
-        
-        self.assertAlmostEqual(value_0048, 202.95697978608, places = 1)
-        self.assertAlmostEqual(value_0053, 509.792070942813, places = 1)
-        self.assertAlmostEqual(value_0082, 261.330887819259, places = 1)
-        
-    
-class GetWordDurationsTest(unittest.TestCase):
-    
-    def test_dataframe_output_type(self):
-        """
-        Does the function output a pandas.DataFrame object?
-        """
-    
-        collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration", "tool_duration", "target_duration", "ratio_word_duration"])
-        output_df = get_vowel_duration(collection, output_df)
-        
-        output_df = get_word_durations(output_df)
-            
-        self.assertIsInstance(output_df, pd.DataFrame)
-    
-    def test_dataframe_output_values(self):
-        """
-        Does the function extract the correct values?
-        """
-    
-        collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration", "tool_duration", "target_duration", "ratio_word_duration"])
-        output_df = get_vowel_duration(collection, output_df)
-        
-        output_df = get_word_durations(output_df)
-        
-        tool_0025 = output_df.loc[output_df["recording"] == "0025", "tool_duration"].item()  
-        target_0025 = output_df.loc[output_df["recording"] == "0025", "target_duration"].item()  
-        ratio_0025 = output_df.loc[output_df["recording"] == "0025", "ratio_word_duration"].item()  
-        
-        tool_0037 = output_df.loc[output_df["recording"] == "0037", "tool_duration"].item()
-        target_0037 = output_df.loc[output_df["recording"] == "0037", "target_duration"].item()
-        ratio_0037 = output_df.loc[output_df["recording"] == "0037", "ratio_word_duration"].item()
-        
-        tool_0081 = output_df.loc[output_df["recording"] == "0081", "tool_duration"].item()
-        target_0081 = output_df.loc[output_df["recording"] == "0081", "target_duration"].item()  
-        ratio_0081 = output_df.loc[output_df["recording"] == "0081", "ratio_word_duration"].item() 
-        
-        self.assertAlmostEqual(tool_0025, 292.096, places = 1)
-        self.assertAlmostEqual(target_0025, 387.95, places = 1)
-        self.assertAlmostEqual(ratio_0025, 0.75282897, places = 1)
-        
-        self.assertAlmostEqual(tool_0037, 417.543, places = 1)
-        self.assertAlmostEqual(target_0037, 348.814, places = 1)
-        self.assertAlmostEqual(ratio_0037, 1.1970362, places = 1)
-        
-        self.assertAlmostEqual(tool_0081, 344.82, places = 1)
-        self.assertAlmostEqual(target_0081, 413.693, places = 1)
-        self.assertAlmostEqual(ratio_0081, 0.83351664, places = 1)
-        
-    def test_missing_label(self):
-        """
-        Does the function correctly deal with the one missing V1 label?
-        """
-        
-        collection = collect_from_directory("test_material/")
-        output_df = pd.DataFrame(columns = ["speaker", "recording", "filepath", "wavpath", "sound_obj", "v1_wav", "v1_start", "v1_end", "v1_duration",  "tool_duration", "target_duration", "ratio_word_duration"])
-        output_df = get_vowel_duration(collection, output_df)
-        
-        with self.assertWarns(UserWarning):
-            get_word_durations(output_df)
-            
-            
-class RunAllAnalysis(unittest.TestCase):
-    
-    """
-    Can all functions be run on the basis of a single input command?
-    """
-    
-    def test_get_user_input(self):
-        """
-        Is user input stored correctly?
-        """
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "y", "y", "y", "y", "y", "y", "test_material/everything.csv"]
+        mock_input.side_effect = ["NotAValidPath/", "y", "n", "n", "n", "n", "n", "n", "test_material/everything.csv", "test_material/sex.csv"]
         
-        tester = Analyzer()
+        with self.assertRaises(ValueError):
+            with mock.patch("builtins.input", mock_input):
+                Analyzer()
+            
+    def test_get_directory(self):
+        """
+        Is user input for input directory stored correctly?
+        """
         
-        for _ in range(9):
-            mock_input()
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+        
+        self.assertTrue("test_material/" == tester.directory)
+    
+    def test_get_output_file(self):
+        """
+        Is user input for output file stored correctly?
+        """
+       
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+        
+        self.assertTrue("everything.csv" == tester.outfile)
+    
+    def test_get_speaker_sex_file(self):
+        """
+        Is user input for file containing speaker sex information stored correctly?
+        """
+        
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+        
+        self.assertTrue("sex.csv" == tester.speaker_sex)
+            
+    
+class AnalysisTests(unittest.TestCase):
+    
+    def test_get_vowel_duration(self):
+        """
+        Are vowel durations extracted correctly?
+        """
+        
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+            
+            value_0018 = tester.data.loc[tester.data["utterance"] == 18, "v1_duration"].item()                        
+            value_0038 = tester.data.loc[tester.data["utterance"] == 38, "v1_duration"].item()
+            value_0058 = tester.data.loc[tester.data["utterance"] == 58, "v1_duration"].item()
+            
+            self.assertAlmostEqual(value_0018, 139.32, places = 1)
+            self.assertAlmostEqual(value_0038, 223.54, places = 1)
+            self.assertAlmostEqual(value_0058, 128.77, places = 1)
+            
+    def test_get_f1(self):
+        """
+        Are formant averages extracted correctly?
+        """
+        
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "y", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+            
+            value_0019 = tester.data.loc[tester.data["utterance"] == 19, "f1"].item()                        
+            value_0039 = tester.data.loc[tester.data["utterance"] == 39, "f1"].item()
+            value_0059 = tester.data.loc[tester.data["utterance"] == 59, "f1"].item()
+            
+            self.assertAlmostEqual(value_0019, 668.966, places = 1)
+            self.assertAlmostEqual(value_0039, 366.676, places = 1)
+            self.assertAlmostEqual(value_0059, 630.239, places = 1)
+            
+    def test_get_f2(self):
+        """
+        Are formant averages extracted correctly?
+        """
+        
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "y", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+            
+            value_0019 = tester.data.loc[tester.data["utterance"] == 19, "f2"].item()                        
+            value_0039 = tester.data.loc[tester.data["utterance"] == 39, "f2"].item()
+            value_0059 = tester.data.loc[tester.data["utterance"] == 59, "f2"].item()
+            
+            self.assertAlmostEqual(value_0019, 1134.546, places = 1)
+            self.assertAlmostEqual(value_0039, 775.480, places = 1)
+            self.assertAlmostEqual(value_0059, 1270.054, places = 1)
+        
+    def test_get_f3(self):
+        """
+        Are formant averages extracted correctly?
+        """
+        
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "y", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+            
+            value_0019 = tester.data.loc[tester.data["utterance"] == 19, "f3"].item()                        
+            value_0039 = tester.data.loc[tester.data["utterance"] == 39, "f3"].item()
+            value_0059 = tester.data.loc[tester.data["utterance"] == 59, "f3"].item()
+            
+            self.assertAlmostEqual(value_0019, 2345.740, places = 1)
+            self.assertAlmostEqual(value_0039, 2758.156, places = 1)
+            self.assertAlmostEqual(value_0059, 2496.351, places = 1)
+            
+    def test_get_f1_f2_dispersion(self):
+        """
+        Are formant dispersions extracted correctly?
+        """
+        
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "y", "y", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+            
+            value_0018 = tester.data.loc[tester.data["utterance"] == 18, "f1_f2_dispersion"].item()                        
+            
+            self.assertAlmostEqual(value_0018, 530.004, places = 1)
+            
+    def test_get_f2_f3_dispersion(self):
+        """
+        Are formant dispersions extracted correctly?
+        """
+        
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "y", "y", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+            
+            value_0018 = tester.data.loc[tester.data["utterance"] == 18, "f2_f3_dispersion"].item()                      
+            
+            self.assertAlmostEqual(value_0018, 1573.604, places = 1)
+        
 
-        self.assertTrue("test_material/" == tester.inputdir)
-        self.assertTrue("test_material/everything.csv" == tester.outfile)
+    def test_get_rms(self):
+        """
+        Are RMS values extracted correctly?
+        """
         
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "y", "n", "n", "n", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+            
+            value_0025 = tester.data.loc[tester.data["utterance"] == 25, "v1_rms"].item()                      
+            value_0033 = tester.data.loc[tester.data["utterance"] == 33, "v1_rms"].item()  
+            value_0061 = tester.data.loc[tester.data["utterance"] == 61, "v1_rms"].item()  
+            
+            self.assertAlmostEqual(value_0025, 0.09407199488169092, places = 3)
+            self.assertAlmostEqual(value_0033, 0.1048775907277835, places = 3)
+            self.assertAlmostEqual(value_0061, 0.10630864064829092, places = 3)
+            
+    def test_get_spectral_tilt(self):
+        """
+        Are spectral tilt values extracted correctly?
+        """
+        
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "y", "n", "n", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+            
+            value_0029 = tester.data.loc[tester.data["utterance"] == 29, "v1_tilt"].item()                      
+            value_0059 = tester.data.loc[tester.data["utterance"] == 59, "v1_tilt"].item()  
+            value_0079 = tester.data.loc[tester.data["utterance"] == 79, "v1_tilt"].item()  
+            
+            self.assertAlmostEqual(value_0029, 422.068372224925, places = 1)
+            self.assertAlmostEqual(value_0059, 496.260799840674, places = 1)
+            self.assertAlmostEqual(value_0079, 525.309714939446, places = 1)
+            
+    def test_get_center_of_gravity(self):
+        """
+        Are center of gravity values extracted correctly?
+        """
+        
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "y", "n", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+            
+            value_0048 = tester.data.loc[tester.data["utterance"] == 48, "v1_cog"].item()                      
+            value_0053 = tester.data.loc[tester.data["utterance"] == 53, "v1_cog"].item()  
+            value_0082 = tester.data.loc[tester.data["utterance"] == 82, "v1_cog"].item()  
+            
+            self.assertAlmostEqual(value_0048, 202.95697978608, places = 1)
+            self.assertAlmostEqual(value_0053, 509.792070942813, places = 1)
+            self.assertAlmostEqual(value_0082, 261.330887819259, places = 1)
+            
+    def test_get_tool_duration(self):
+        """
+        Are tool durations extracted correctly?
+        """
+        
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "y", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+            
+            value_0025 = tester.data.loc[tester.data["utterance"] == 25, "tool_duration"].item()                      
+            value_0037 = tester.data.loc[tester.data["utterance"] == 37, "tool_duration"].item()  
+            value_0081 = tester.data.loc[tester.data["utterance"] == 81, "tool_duration"].item()  
+            
+            self.assertAlmostEqual(value_0025, 292.096, places = 1)
+            self.assertAlmostEqual(value_0037, 417.543, places = 1)
+            self.assertAlmostEqual(value_0081, 344.82, places = 1)
+    
+    
+    def test_get_target_duration(self):
+        """
+        Are tool durations extracted correctly?
+        """
+        
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "y", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+            
+            value_0025 = tester.data.loc[tester.data["utterance"] == 25, "target_duration"].item()                      
+            value_0037 = tester.data.loc[tester.data["utterance"] == 37, "target_duration"].item()  
+            value_0081 = tester.data.loc[tester.data["utterance"] == 81, "target_duration"].item()  
+            
+            self.assertAlmostEqual(value_0025, 387.95, places = 1)
+            self.assertAlmostEqual(value_0037, 348.814, places = 1)
+            self.assertAlmostEqual(value_0081, 413.693, places = 1)
+            
+            
+    def test_get_word_duration_ratios(self):
+        """
+        Are ratios of word durations calculated correctly?
+        """
+        
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "y", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+            
+            value_0025 = tester.data.loc[tester.data["utterance"] == 25, "ratio_word_duration"].item()                      
+            value_0037 = tester.data.loc[tester.data["utterance"] == 37, "ratio_word_duration"].item()  
+            value_0081 = tester.data.loc[tester.data["utterance"] == 81, "ratio_word_duration"].item()  
+            
+            self.assertAlmostEqual(value_0025, 0.75282897, places = 1)
+            self.assertAlmostEqual(value_0037, 1.1970362, places = 1)
+            self.assertAlmostEqual(value_0081, 0.83351664, places = 1)
