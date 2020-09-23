@@ -95,9 +95,9 @@ class AnalysisTests(unittest.TestCase):
             value_0039 = tester.data.loc[tester.data["utterance"] == 39, "f1"].item()
             value_0059 = tester.data.loc[tester.data["utterance"] == 59, "f1"].item()
             
-            self.assertAlmostEqual(value_0019, 668.966, places = 1)
-            self.assertAlmostEqual(value_0039, 366.676, places = 1)
-            self.assertAlmostEqual(value_0059, 630.239, places = 1)
+            self.assertAlmostEqual(value_0019, 674.983, places = 1)
+            self.assertAlmostEqual(value_0039, 364.388, places = 1)
+            self.assertAlmostEqual(value_0059, 663.610, places = 1)
             
     def test_get_f2(self):
         """
@@ -114,9 +114,9 @@ class AnalysisTests(unittest.TestCase):
             value_0039 = tester.data.loc[tester.data["utterance"] == 39, "f2"].item()
             value_0059 = tester.data.loc[tester.data["utterance"] == 59, "f2"].item()
             
-            self.assertAlmostEqual(value_0019, 1134.546, places = 1)
-            self.assertAlmostEqual(value_0039, 775.480, places = 1)
-            self.assertAlmostEqual(value_0059, 1270.054, places = 1)
+            self.assertAlmostEqual(value_0019, 1143.153, places = 1)
+            self.assertAlmostEqual(value_0039, 781.083, places = 1)
+            self.assertAlmostEqual(value_0059, 1291.016, places = 1)
         
     def test_get_f3(self):
         """
@@ -133,9 +133,9 @@ class AnalysisTests(unittest.TestCase):
             value_0039 = tester.data.loc[tester.data["utterance"] == 39, "f3"].item()
             value_0059 = tester.data.loc[tester.data["utterance"] == 59, "f3"].item()
             
-            self.assertAlmostEqual(value_0019, 2345.740, places = 1)
-            self.assertAlmostEqual(value_0039, 2758.156, places = 1)
-            self.assertAlmostEqual(value_0059, 2496.351, places = 1)
+            self.assertAlmostEqual(value_0019, 2420.693, places = 1)
+            self.assertAlmostEqual(value_0039, 2616.461, places = 1)
+            self.assertAlmostEqual(value_0059, 2485.847, places = 1)
             
     def test_get_f1_f2_dispersion(self):
         """
@@ -150,7 +150,7 @@ class AnalysisTests(unittest.TestCase):
             
             value_0018 = tester.data.loc[tester.data["utterance"] == 18, "f1_f2_dispersion"].item()                        
             
-            self.assertAlmostEqual(value_0018, 530.004, places = 1)
+            self.assertAlmostEqual(value_0018, 499.455, places = 1)
             
     def test_get_f2_f3_dispersion(self):
         """
@@ -165,7 +165,7 @@ class AnalysisTests(unittest.TestCase):
             
             value_0018 = tester.data.loc[tester.data["utterance"] == 18, "f2_f3_dispersion"].item()                      
             
-            self.assertAlmostEqual(value_0018, 1573.604, places = 1)
+            self.assertAlmostEqual(value_0018, 1489.802, places = 1)
         
 
     def test_get_rms(self):
@@ -291,7 +291,7 @@ class AnalysisTests(unittest.TestCase):
         12 * log2(pitch_of_target_in_Hz / pitch_of_low_end_in_Hz)
         \"""
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "y", "y", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "n", "n", "n", "n", "n", "n", "n", "y", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -311,7 +311,7 @@ class AnalysisTests(unittest.TestCase):
         12 * log2(pitch_of_peak_in_Hz / pitch_of_low_end_in_Hz)
         \"""
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "y", "y", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "n", "n", "n", "n", "n", "n", "n", "y", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()

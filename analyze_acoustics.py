@@ -324,7 +324,7 @@ class Analyzer:
                     if "sex" in self.data.columns:
                         if row["sex"] == "m":
                             formant_obj = row["sound_obj"].to_formant_burg(
-                                maximum_formant=5000.0
+                                maximum_formant=4500.0
                             )
                         elif row["sex"] == "f":
                             formant_obj = row["sound_obj"].to_formant_burg(
