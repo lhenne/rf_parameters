@@ -25,6 +25,12 @@ class Analyzer:
         self.directory = input(
             "Input path, containing Praat TextGrids and sound files in sub-folders: "
         )
+        
+        if os.path.exists(self.directory):
+            pass
+        else:
+            raise ValueError("Please enter a valid path.")
+        
         self.method_calls = list()
 
         method_prompts = [
@@ -35,7 +41,7 @@ class Analyzer:
             "Get spectral tilt? [Y/n]: ",
             "Get center of gravity? [Y/n]: ",
             "Get word durations? [Y/n]: ",
-            "Get target and peak height relative to low end? [Y/n]",
+            "Get target and peak height relative to low end? [Y/n] ",
         ]
 
         for i in range(len(method_prompts)):
