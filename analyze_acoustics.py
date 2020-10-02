@@ -35,7 +35,7 @@ class Analyzer:
             "Get spectral tilt? [Y/n]: ",
             "Get center of gravity? [Y/n]: ",
             "Get word durations? [Y/n]: ",
-            "Get target and peak height relative to low end? [Y/n]"
+            "Get target and peak height relative to low end? [Y/n]",
         ]
 
         for i in range(len(method_prompts)):
@@ -55,7 +55,9 @@ class Analyzer:
             )
             self.collection = self.collect_from_directory()
 
-            speaker_sex_path = os.path.abspath(os.path.join(self.directory, self.speaker_sex))
+            speaker_sex_path = os.path.abspath(
+                os.path.join(self.directory, self.speaker_sex)
+            )
             if os.path.isfile(speaker_sex_path):
                 self.speaker_sex = pd.read_csv(
                     os.path.join(self.directory, self.speaker_sex)
@@ -75,7 +77,7 @@ class Analyzer:
                 self.get_vowel_duration()
 
             if self.method_calls[1]:
-                # TODO: Failsafe if method_calls[0] == False              
+                # TODO: Failsafe if method_calls[0] == False
                 self.data = self.data.assign(f1=np.nan, f2=np.nan, f3=np.nan)
                 self.get_formants()
 
@@ -130,18 +132,17 @@ class Analyzer:
                 self.data = self.data.assign(
                     tool_duration=np.nan,
                     target_duration=np.nan,
-                    ratio_word_duration=np.nan
+                    ratio_word_duration=np.nan,
                 )
                 self.get_word_durations()
-            
+
             if self.method_calls[7]:
-                
+
                 self.data = self.data.assign(
-                    target_low_end=np.nan,
-                    peak_low_end=np.nan
+                    exc_target_low_end=np.nan, exc_peak_low_end=np.nan
                 )
                 self.get_relative_heights()
-                
+
             drop_cols = [
                 "filepath",
                 "wavpath",
@@ -471,7 +472,8 @@ class Analyzer:
         """
 
         if isinstance(self.data, pd.DataFrame) and all(
-            col in self.data.columns for col in ["sound_obj", "v1_start", "v1_end", "v1_obj", "v1_tilt"]
+            col in self.data.columns
+            for col in ["sound_obj", "v1_start", "v1_end", "v1_obj", "v1_tilt"]
         ):
             for i, row in tqdm(
                 self.data.iterrows(),
@@ -633,18 +635,18 @@ class Analyzer:
             )
 
     def get_relative_heights(self):
-        
+
         """
         Calculate the relative heights for target labels (second tone label) and peak labels ("H" tone label), compared to the low end ("L%")
         """
-        
+
         if isinstance(self.data, pd.DataFrame) and all(
             col in self.data.columns
             for col in [
                 "filepath",
                 "sound_obj",
-                "target_low_end",
-                "peak_low_end"
+                "exc_target_low_end",
+                "exc_peak_low_end",
             ]
         ):
             for i, row in tqdm(
@@ -667,27 +669,45 @@ class Analyzer:
                         num_labels = praat.call(
                             textgrid, "Get number of points", tiernum
                         )
-                    
+
                         if num_labels == 3:
-                            pitch_obj = row["sound_obj"].to_pitch()
-                            
-                            labels = [praat.call(textgrid, "Get label of point", tiernum, point) for point in range(1, num_labels + 1)]
-                            
-                            timestamps = [praat.call(textgrid, "Get time of point", tiernum, point) for point in range(1, num_labels + 1)]
-                            
-                            f0s = [pitch_obj.get_value_at_time(timestamp) for timestamp in timestamps]
-                            
-                            row["target_low_end"] = 12 * math.log2(f0s[1] / f0s[2])
-                            
-                            peak = labels.index("L-%")
-                            row["peak_low_end"] = 12 * math.log2(f0s[peak] / f0s[2])
-                        
+                            pitch_obj = row["sound_obj"].to_pitch(
+                                pitch_floor=50, pitch_ceiling=500
+                            )
+
+                            labels = [
+                                praat.call(
+                                    textgrid, "Get label of point", tiernum, point
+                                )
+                                for point in range(1, num_labels + 1)
+                            ]
+
+                            timestamps = [
+                                praat.call(
+                                    textgrid, "Get time of point", tiernum, point
+                                )
+                                for point in range(1, num_labels + 1)
+                            ]
+
+                            f0s = [
+                                pitch_obj.get_value_at_time(timestamp)
+                                for timestamp in timestamps
+                            ]
+
+                            targ_vs_low = 12 * math.log2(f0s[1] / f0s[2])
+
+                            peak = labels.index("H")
+                            peak_vs_low = 12 * math.log2(f0s[peak] / f0s[2])
+
+                            self.data.loc[
+                                i, ["exc_target_low_end", "exc_peak_low_end"]
+                            ] = [targ_vs_low, peak_vs_low]
                         else:
                             warnings.warn(
                                 "{}-{} is missing word annotations or the word annotations could not be automatically determined.".format(
                                     row["speaker"], row["utterance"]
                                 ),
-                                UserWarning
+                                UserWarning,
                             )
 
                 if found_tone_tier is False:
@@ -695,7 +715,7 @@ class Analyzer:
                         "{}-{} does not contain tone tier.".format(
                             row["speaker"], row["utterance"]
                         ),
-                        UserWarning
+                        UserWarning,
                     )
                 else:
                     pass
@@ -703,8 +723,8 @@ class Analyzer:
         else:
             raise TypeError(
                 "Please provide a DataFrame containing the necessary columns."
-            )    
-                    
+            )
+
 
 if __name__ == "__main__":
     Analyzer()
