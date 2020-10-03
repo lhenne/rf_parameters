@@ -25,7 +25,7 @@ class InputTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -38,7 +38,7 @@ class InputTests(unittest.TestCase):
         """
        
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -51,7 +51,7 @@ class InputTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "n", "n", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "n", "n", "n", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -67,7 +67,7 @@ class AnalysisTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -86,7 +86,7 @@ class AnalysisTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "y", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "y", "n", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -105,7 +105,7 @@ class AnalysisTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "y", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "y", "n", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -124,7 +124,7 @@ class AnalysisTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "y", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "y", "n", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -143,7 +143,7 @@ class AnalysisTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "y", "y", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "y", "y", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -158,7 +158,7 @@ class AnalysisTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "y", "y", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "y", "y", "n", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -174,7 +174,7 @@ class AnalysisTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "n", "n", "y", "n", "n", "n", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "y", "n", "n", "n", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -193,7 +193,7 @@ class AnalysisTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "y", "n", "n", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "y", "n", "n", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -212,7 +212,7 @@ class AnalysisTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "y", "n", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "y", "n", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -231,7 +231,7 @@ class AnalysisTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "y", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "y", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -251,7 +251,7 @@ class AnalysisTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "y", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "y", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -271,7 +271,7 @@ class AnalysisTests(unittest.TestCase):
         """
         
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "y", "n", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "y", "n", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -291,7 +291,7 @@ class AnalysisTests(unittest.TestCase):
         12 * log2(pitch_of_target_in_Hz / pitch_of_low_end_in_Hz)
         """
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "n", "n", "n", "n", "n", "n", "n", "y", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "n", "n", "n", "n", "n", "n", "n", "y", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -311,7 +311,7 @@ class AnalysisTests(unittest.TestCase):
         12 * log2(pitch_of_peak_in_Hz / pitch_of_low_end_in_Hz)
         """
         mock_input = Mock()
-        mock_input.side_effect = ["test_material/", "n", "n", "n", "n", "n", "n", "n", "y", "everything.csv", "sex.csv"]
+        mock_input.side_effect = ["test_material/", "n", "n", "n", "n", "n", "n", "n", "y", "n", "everything.csv", "sex.csv"]
         
         with mock.patch("builtins.input", mock_input):
             tester = Analyzer()
@@ -323,3 +323,23 @@ class AnalysisTests(unittest.TestCase):
             self.assertAlmostEqual(value_0028, -0.88188441, places = 3)
             self.assertAlmostEqual(value_0043, 6.7084764, places = 3)
             self.assertAlmostEqual(value_0094, 6.0587738, places = 3)
+            
+    def test_get_h1_h2(self):
+        """
+        Is spectral tilt using H1-H2 calculated correctly?
+        """
+        mock_input = Mock()
+        mock_input.side_effect = ["test_material/", "y", "n", "n", "n", "n", "n", "n", "n", "y", "everything.csv", "sex.csv"]
+        
+        with mock.patch("builtins.input", mock_input):
+            tester = Analyzer()
+            
+            value_0029 = tester.data.loc[tester.data["utterance"] == 29, "h1_h2"].item()                      
+            value_0044 = tester.data.loc[tester.data["utterance"] == 44, "h1_h2"].item()  
+            value_0095 = tester.data.loc[tester.data["utterance"] == 95, "h1_h2"].item()
+            
+            self.assertAlmostEqual(value_0029, 3.783904, places = 3)
+            self.assertAlmostEqual(value_0044, 4.6146875, places = 3)
+            self.assertAlmostEqual(value_0095, 2.4265053, places = 3)
+
+        
