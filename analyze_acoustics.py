@@ -30,6 +30,8 @@ class Analyzer:
             pass
         else:
             raise ValueError("Please enter a valid path.")
+        
+        self.directory = "/home/lukas/Desktop/random_forest/textgrid"
 
         self.method_calls = list()
 
@@ -41,8 +43,7 @@ class Analyzer:
             "Get spectral tilt? [Y/n]: ",
             "Get center of gravity? [Y/n]: ",
             "Get word durations? [Y/n]: ",
-            "Get target and peak height relative to low end? [Y/n] ",
-            "Get H1-H2 spectral tilt measure?",
+            "Get target and peak height relative to low end? [Y/n]: ",
         ]
 
         for i in range(len(method_prompts)):
@@ -55,6 +56,7 @@ class Analyzer:
 
         self.outfile = input("Output file, CSV to create or append to: ")
         self.speaker_sex = input("CSV Table specifying speaker sex: ")
+        
 
         if any(self.method_calls):
             self.data = pd.DataFrame(
@@ -150,11 +152,6 @@ class Analyzer:
                 )
                 self.get_relative_heights()
 
-            if self.method_calls[8]:
-
-                self.data = self.data.assign(h1_h2=np.nan)
-                self.get_h1_h2()
-
             drop_cols = [
                 "filepath",
                 "wavpath",
@@ -162,6 +159,7 @@ class Analyzer:
                 "v1_obj",
                 "v1_start",
                 "v1_end",
+                "sex",
             ]
             for col in drop_cols:
                 if col in self.data.columns:
@@ -732,74 +730,6 @@ class Analyzer:
                 else:
                     pass
 
-        else:
-            raise TypeError(
-                "Please provide a DataFrame containing the necessary columns."
-            )
-
-    def get_h1_h2(self):
-        """
-        Calculate the H1-H2 value for V1
-        """
-        if isinstance(self.data, pd.DataFrame) and all(
-            col in self.data.columns
-            for col in ["sound_obj", "v1_start", "v1_end", "h1_h2"]
-        ):
-            for i, row in tqdm(
-                self.data.iterrows(),
-                desc="Calculating H1-H2.",
-                total=len(self.data),
-                leave=True,
-                position=0,
-            ):
-                if not np.isnan(row["v1_start"]):
-                    pitch_obj = row["sound_obj"].to_pitch(
-                        pitch_floor=50, pitch_ceiling=500
-                    )
-
-                    floor = 0.75 * praat.call(
-                        pitch_obj,
-                        "Get quantile",
-                        row["v1_start"],
-                        row["v1_end"],
-                        0.25,
-                        "Hertz",
-                    )
-                    ceiling = 2.5 * praat.call(
-                        pitch_obj,
-                        "Get quantile",
-                        row["v1_start"],
-                        row["v1_end"],
-                        0.75,
-                        "Hertz",
-                    )
-
-                    pitch_obj_2 = row["sound_obj"].to_pitch_cc(
-                        pitch_floor=floor, pitch_ceiling=ceiling
-                    )
-                    pp_obj = praat.call(pitch_obj_2, "To PointProcess")
-
-                    ltas_obj = praat.call(
-                        [row["sound_obj"], pp_obj],
-                        "To Ltas (only harmonics)",
-                        20,
-                        0.0001,
-                        0.02,
-                        1.3,
-                    )
-
-                    h1 = praat.call(ltas_obj, "Get value in bin", 2)
-                    h2 = praat.call(ltas_obj, "Get value in bin", 3)
-
-                    self.data.loc[i, "h1_h2"] = h1 - h2
-
-                else:
-                    warnings.warn(
-                        "{}-{} does not contain vowel durations. Skipping.".format(
-                            row["speaker"], row["utterance"]
-                        ),
-                        UserWarning,
-                    )
         else:
             raise TypeError(
                 "Please provide a DataFrame containing the necessary columns."
