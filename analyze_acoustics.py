@@ -7,6 +7,7 @@ import os
 import warnings
 from tqdm import tqdm
 import math
+import json
 
 
 def custom_warning(message, category, filename, lineno, line=None):
@@ -22,41 +23,16 @@ class Analyzer:
     """
 
     def __init__(self) -> None:
-        self.directory = input(
-            "Input path, containing Praat TextGrids and sound files in sub-folders: "
-        )
 
-        if os.path.exists(self.directory):
+        with open("config.json", "r") as cfg:
+            self.config = json.load(cfg)
+
+        if os.path.exists(self.config["directory"]):
             pass
         else:
             raise ValueError("Please enter a valid path.")
-        
-        self.directory = "/home/lukas/Desktop/random_forest/textgrid"
 
-        self.method_calls = list()
-
-        method_prompts = [
-            "Get vowel durations? [Y/n]: ",
-            "Get formant averages? [Y/n]: ",
-            "Get formant dispersions per speaker? [Y/n]: ",
-            "Get RMS values? [Y/n]: ",
-            "Get spectral tilt? [Y/n]: ",
-            "Get center of gravity? [Y/n]: ",
-            "Get word durations? [Y/n]: ",
-            "Get target and peak height relative to low end? [Y/n]: ",
-        ]
-
-        for i in range(len(method_prompts)):
-            call_method = input(method_prompts[i])
-
-            if call_method in ["", "y", "Y"]:
-                self.method_calls.append(True)
-            else:
-                self.method_calls.append(False)
-
-        self.outfile = input("Output file, CSV to create or append to: ")
-        self.speaker_sex = input("CSV Table specifying speaker sex: ")
-        
+        self.method_calls = [k for k, v in self.config["options"].items() if v]
 
         if any(self.method_calls):
             self.data = pd.DataFrame(
@@ -64,35 +40,23 @@ class Analyzer:
             )
             self.collection = self.collect_from_directory()
 
-            speaker_sex_path = os.path.abspath(
-                os.path.join(self.directory, self.speaker_sex)
-            )
-            if os.path.isfile(speaker_sex_path):
-                self.speaker_sex = pd.read_csv(
-                    os.path.join(self.directory, self.speaker_sex)
-                )
-                self.data = self.data.merge(
-                    self.speaker_sex, how="left", on=["speaker"]
-                )
-
             self.data["sound_obj"] = self.data.apply(
                 lambda row: parselmouth.Sound(row["wavpath"]), axis=1
             )
 
-            if self.method_calls[0]:
+            if "vowel duration" in self.method_calls:
                 self.data = self.data.assign(
                     v1_start=np.nan, v1_end=np.nan, v1_duration=np.nan
                 )
                 self.get_vowel_duration()
 
-            if self.method_calls[1]:
-                # TODO: Failsafe if method_calls[0] == False
+            if "formant averages" in self.method_calls:
                 self.data = self.data.assign(f1=np.nan, f2=np.nan, f3=np.nan)
                 self.get_formants()
 
-            if self.method_calls[2]:
+            if "formant dispersions" in self.method_calls:
 
-                if not self.method_calls[1]:
+                if not "formant averages" in self.method_calls:
                     raise Exception(
                         "Formant dispersion measurement requires formants to be calculated as well."
                     )
@@ -102,9 +66,9 @@ class Analyzer:
                 )
                 self.get_formant_dispersions()
 
-            if self.method_calls[3]:
+            if "rms" in self.method_calls:
 
-                if not self.method_calls[0]:
+                if not "vowel duration" in self.method_calls:
                     raise Exception(
                         "RMS calculation requires vowel durations to be calculated as well."
                     )
@@ -112,9 +76,9 @@ class Analyzer:
                 self.data = self.data.assign(v1_rms=np.nan)
                 self.get_rms()
 
-            if self.method_calls[4]:
+            if "spectral tilt" in self.method_calls:
 
-                if not self.method_calls[0]:
+                if not "vowel duration" in self.method_calls:
                     raise Exception(
                         "Spectral tilt calculation requires vowel durations to be calculated as well."
                     )
@@ -122,21 +86,21 @@ class Analyzer:
                 self.data = self.data.assign(v1_obj=None, v1_tilt=np.nan)
                 self.get_spectral_tilt()
 
-            if self.method_calls[5]:
+            if "center of gravity" in self.method_calls:
 
-                if not self.method_calls[0]:
+                if not "vowel duration" in self.method_calls:
                     raise Exception(
                         "Spectral center of gravity calculation requires vowel durations to be calculated as well."
                     )
 
-                if self.method_calls[4]:
+                if "spectral tilt" in self.method_calls:
                     self.data = self.data.assign(v1_cog=np.nan)
                 else:
                     self.data = self.data.assign(v1_obj=np.nan, v1_cog=np.nan)
 
                 self.get_center_of_gravity()
 
-            if self.method_calls[6]:
+            if "word duration" in self.method_calls:
 
                 self.data = self.data.assign(
                     tool_duration=np.nan,
@@ -145,7 +109,7 @@ class Analyzer:
                 )
                 self.get_word_durations()
 
-            if self.method_calls[7]:
+            if "relative target and peak height" in self.method_calls:
 
                 self.data = self.data.assign(
                     exc_target_low_end=np.nan, exc_peak_low_end=np.nan
@@ -165,8 +129,15 @@ class Analyzer:
                 if col in self.data.columns:
                     self.data = self.data.drop(columns=col, axis=1)
 
-            if os.path.isfile(os.path.join(self.directory, self.outfile)):
-                input_df = pd.read_csv(os.path.join(self.directory, self.outfile))
+            in_abspath = os.path.join(
+                self.config["directory"], self.config["input_file"]
+            )
+            out_abspath = os.path.join(
+                self.config["directory"], self.config["output_file"]
+            )
+
+            if os.path.isfile(in_abspath):
+                input_df = pd.read_csv(in_abspath)
                 input_df = input_df.astype({"speaker": "object", "utterance": "int32"})
                 self.data = self.data.astype(
                     {"speaker": "object", "utterance": "int32"}
@@ -176,12 +147,12 @@ class Analyzer:
                     self.data, how="inner", on=["speaker", "utterance"]
                 )
 
-                with open(os.path.join(self.directory, self.outfile), "w+") as outfile:
-                    output_df.to_csv(outfile, sep=",")
+                with open(out_abspath, "w+") as outfile:
+                    output_df.to_csv(outfile, sep=",", index=False)
 
             else:
-                with open(os.path.join(self.directory, self.outfile), "w+") as outfile:
-                    self.data.to_csv(outfile, sep=",")
+                with open(out_abspath, "w+") as outfile:
+                    self.data.to_csv(outfile, sep=",", index=False)
 
         else:
             print("No operations performed. Exiting.")
@@ -190,15 +161,15 @@ class Analyzer:
 
         cwd = os.getcwd()
 
-        if self.directory and isinstance(self.directory, str):
-            if os.path.exists(os.path.dirname(self.directory)) or os.path.exists(
-                os.path.join(cwd, self.directory)
+        if self.config["directory"] and isinstance(self.config["directory"], str):
+            if os.path.exists(os.path.dirname(self.config["directory"])) or os.path.exists(
+                os.path.join(cwd, self.config["directory"])
             ):
 
-                dir_content = os.listdir(self.directory)
+                dir_content = os.listdir(self.config["directory"])
                 collected_items = {
                     session: np.asarray(
-                        glob(os.path.join(self.directory, session, "*.TextGrid"))
+                        glob(os.path.join(self.config["directory"], session, "*.TextGrid"))
                     )
                     for session in dir_content
                 }
