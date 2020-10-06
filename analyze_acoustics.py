@@ -46,12 +46,12 @@ class Analyzer:
 
             if "vowel duration" in self.method_calls:
                 self.data = self.data.assign(
-                    v1_start=np.nan, v1_end=np.nan, v1_duration=np.nan
+                    v1_start=np.nan, v1_end=np.nan, v1_duration=np.nan, textgrid=np.nan
                 )
                 self.get_vowel_duration()
 
             if "formant averages" in self.method_calls:
-                self.data = self.data.assign(f1=np.nan, f2=np.nan, f3=np.nan)
+                self.data = self.data.assign(f1=np.nan, f2=np.nan, f3=np.nan, formant_obj=np.nan)
                 self.get_formants()
 
             if "formant dispersions" in self.method_calls:
@@ -115,11 +115,21 @@ class Analyzer:
                     exc_target_low_end=np.nan, exc_peak_low_end=np.nan
                 )
                 self.get_relative_heights()
+                
+            if "h1-h2" in self.method_calls:
+                
+                self.data = self.data.assign(
+                    h1_h2=np.nan
+                )
+                self.get_h1_h2()
 
             drop_cols = [
                 "filepath",
                 "wavpath",
                 "sound_obj",
+                "textgrid",
+                "pitch_obj",
+                "formant_obj",
                 "v1_obj",
                 "v1_start",
                 "v1_end",
@@ -246,17 +256,19 @@ class Analyzer:
                             )
                             v1_duration = (v1_end - v1_start) * 1000
 
-                            self.data.loc[i, ["v1_start", "v1_end", "v1_duration"]] = [
+                            self.data.loc[i, ["v1_start", "v1_end", "v1_duration", "textgrid"]] = [
                                 v1_start,
                                 v1_end,
                                 v1_duration,
+                                textgrid
                             ]
 
                         else:
-                            self.data.loc[i, ["v1_start", "v1_end", "v1_duration"]] = [
+                            self.data.loc[i, ["v1_start", "v1_end", "v1_duration", "textgrid"]] = [
                                 np.nan,
                                 np.nan,
                                 np.nan,
+                                textgrid
                             ]
                             warnings.warn(
                                 "{}-{} is missing a V1 annotation or the V1 annotation could not be automatically determined.".format(
@@ -342,6 +354,7 @@ class Analyzer:
                         row["v1_end"],
                         "Hertz",
                     )
+                    self.data.loc[i, "formant_obj"] = formant_obj
 
                 else:
                     warnings.warn(
@@ -681,15 +694,10 @@ class Analyzer:
                             peak_vs_low = 12 * math.log2(f0s[peak] / f0s[2])
 
                             self.data.loc[
-                                i, ["exc_target_low_end", "exc_peak_low_end"]
-                            ] = [targ_vs_low, peak_vs_low]
+                                i, ["exc_target_low_end", "exc_peak_low_end", "pitch_obj"]
+                            ] = [targ_vs_low, peak_vs_low, pitch_obj]
                         else:
-                            warnings.warn(
-                                "{}-{} is missing word annotations or the word annotations could not be automatically determined.".format(
-                                    row["speaker"], row["utterance"]
-                                ),
-                                UserWarning,
-                            )
+                            pass
 
                 if found_tone_tier is False:
                     warnings.warn(
@@ -706,6 +714,90 @@ class Analyzer:
                 "Please provide a DataFrame containing the necessary columns."
             )
 
+    def get_h1_h2(self):
+        
+        """
+        Calculate H1-H2
+        """
+        
+        for i, row in tqdm(
+                self.data.iterrows(),
+                desc="Calculating relative target and peak heights.",
+                total=len(self.data),
+                leave=True,
+                position=0,
+            ):
+                    
+            if "pitch_obj" in row.index and pd.notnull(row["pitch_obj"]):
+                pitch_obj = row["pitch_obj"]
+            else:
+                pitch_obj = row["sound_obj"].to_pitch(pitch_floor=50, pitch_ceiling=500)
+                
+            textgrid = row["textgrid"]
+            numtiers = praat.call(textgrid, "Get number of tiers")
+            snd_obj = row["sound_obj"]
+            
+            if pd.notnull(row["v1_start"]):
+                v1_start = row["v1_start"]
+                v1_end = row["v1_end"]
+                
+                q25 = 0.75 * praat.call(pitch_obj, "Get quantile", v1_start, v1_end, 0.25, "Hertz")
+                q75 = 2.5 * praat.call(pitch_obj, "Get quantile", v1_start, v1_end, 0.75, "Hertz")
+                
+                pitch_obj_2 = snd_obj.to_pitch(pitch_floor=q25, pitch_ceiling=q75)
+                pp_obj = praat.call(pitch_obj_2, "To PointProcess")
+        
+                f1 = row["f1"]
+                b1 = 80 + 120 * f1 / 5_000
+                
+                f2 = row["f2"]
+                b2 = 80 + 120 * f2 / 5_000
+                
+                h1 = praat.call(pitch_obj_2, "Get mean", row["v1_start"], row["v1_end"], "Hertz")            
+                h2 = h1 * 2
+                    
+                ltas_obj = praat.call([snd_obj, pp_obj], "To Ltas (only harmonics)", 20, 0.0001, 0.02, 1.3)
+                
+                h1_amp = praat.call(ltas_obj, "Get value in bin", 2)  
+                h2_amp = praat.call(ltas_obj, "Get value in bin", 3)
+                h1_correction = correct_h(h1, f1, f2, b1, b2)
+                h2_correction = correct_h(h2, f1, f2, b1, b2)
+                h1_correct = h1_amp - h1_correction
+                h2_correct = h2_amp - h2_correction
+                
+                self.data.loc[i, "h1_h2"] = h1_correct - h2_correct
+            
+            else:
+                self.data.loc[i, "h1_h2"] = np.nan    
+            
+            
+
+# ANCILLARY FUNCTIONS
+
+def correct_h(f0, f1, f2, b1, b2):
+    
+    def omega_i(f_i):
+        return 2 * math.pi * f_i / 48_000
+        
+    def r_i(b_i):
+        return math.e ** (-math.pi * b_i / 48_000)
+        
+    f1_corr = 10 * math.log10(
+        (
+            ((1 - 2 * r_i(b1) * math.cos(omega_i(f1)) + r_i(b1) ** 2) ** 2)
+            /
+            (1 - 2 * r_i(b1) * math.cos(omega_i(f0) + omega_i(f1)) + r_i(b1) ** 2) * (1 - 2 * r_i(b1) * math.cos(omega_i(f0) - omega_i(f1)) + r_i(b1) ** 2)
+        )
+    )
+    f2_corr = 10 * math.log10(
+        (
+            ((1 - 2 * r_i(b2) * math.cos(omega_i(f2)) + r_i(b2) ** 2) ** 2)
+            /
+            (1 - 2 * r_i(b2) * math.cos(omega_i(f0) + omega_i(f2)) + r_i(b2) ** 2) * (1 - 2 * r_i(b2) * math.cos(omega_i(f0) - omega_i(f2)) + r_i(b2) ** 2)
+        )
+    )
+    
+    return f1_corr + f2_corr
 
 if __name__ == "__main__":
     Analyzer()
