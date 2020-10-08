@@ -39,6 +39,7 @@
     "spectral tilt": true,
     "center of gravity": true,
     "word duration": true,
-    "relative target and peak height": true
+    "relative target and peak height": true,
+    "h1-h2": true
   }
 }
