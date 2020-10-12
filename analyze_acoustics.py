@@ -4,18 +4,12 @@ import pandas as pd
 import numpy as np
 from glob import glob
 import os
-import warnings
 from tqdm import tqdm
 import math
 import json
+import logging
 
-def custom_warning(message, category, filename, lineno, line=None):
-    return "{}:{}: {}: {}\n".format(
-        filename, lineno, category.__name__, message
-    )  # make warnings more informative for end user
-
-
-warnings.formatwarning = custom_warning
+logging.basicConfig(filename="warnings.txt", level=logging.DEBUG)
 
 
 class Analyzer:
@@ -36,7 +30,7 @@ class Analyzer:
                 columns=["speaker", "utterance", "filepath", "wavpath"]
             )
             self.collection = self.collect_from_directory()
-            
+
             self.data["sound_obj"] = self.data.apply(
                 lambda row: parselmouth.Sound(row["wavpath"]), axis=1
             )
@@ -265,19 +259,18 @@ class Analyzer:
                             self.data.loc[
                                 i, ["v1_start", "v1_end", "v1_duration", "textgrid"]
                             ] = [np.nan, np.nan, np.nan, textgrid]
-                            warnings.warn(
+
+                            logging.warning(
                                 "{}-{} is missing a V1 annotation or the V1 annotation could not be automatically determined.".format(
                                     row["speaker"], row["utterance"]
-                                ),
-                                UserWarning,
+                                )
                             )
 
                 if found_vowel_tier is False:
-                    warnings.warn(
+                    logging.warning(
                         "{}-{} does not contain Vowel tier.".format(
                             row["speaker"], row["utterance"]
-                        ),
-                        UserWarning,
+                        )
                     )
                 else:
                     pass
@@ -352,11 +345,10 @@ class Analyzer:
                     self.data.loc[i, "formant_obj"] = formant_obj
 
                 else:
-                    warnings.warn(
+                    logging.warning(
                         "Skipping formant measurement for {}-{}: missing V1 segment sound data.".format(
                             row["speaker"], row["utterance"]
-                        ),
-                        UserWarning,
+                        )
                     )
 
             self.data.sort_values("utterance")
@@ -391,16 +383,19 @@ class Analyzer:
                 f3s = list(utterances["f3"].dropna())
 
                 if not len(f1s) == len(f2s) == len(f3s):
-                    warnings.warn(
-                        "There are more formants of one kind than of another.",
-                        UserWarning,
+                    logging.warning(
+                        "{}: There are more formants of one kind than of another.".format(
+                            speaker
+                        )
                     )
 
                 formant_count = max(len(f1s), len(f2s), len(f3s))
 
                 if not formant_count == len(utterances):
-                    warnings.warn(
-                        "One or more utterances do not have any corresponding formant values."
+                    logging.warning(
+                        "{}: One or more utterances do not have any corresponding formant values.".format(
+                            speaker
+                        )
                     )
 
                 f1_f2_dispersion = sum(
@@ -442,11 +437,10 @@ class Analyzer:
                     )
 
                 else:
-                    warnings.warn(
+                    logging.warning(
                         "{}-{} does not contain Vowel tier. NA value inserted.".format(
                             row["speaker"], row["utterance"]
-                        ),
-                        UserWarning,
+                        )
                     )
 
         else:
@@ -483,7 +477,7 @@ class Analyzer:
                     self.data.loc[i, "v1_obj"] = v1_obj
                     self.data.loc[i, "v1_tilt"] = v1_tilt
                 else:
-                    warnings.warn(
+                    logging.warning(
                         "{}-{} does not contain Vowel tier. NA value inserted.".format(
                             row["speaker"], row["utterance"]
                         ),
@@ -526,11 +520,10 @@ class Analyzer:
                         ] = v1_obj.to_spectrum().get_centre_of_gravity()
 
                     else:
-                        warnings.warn(
+                        logging.warning(
                             "{}-{} does not contain Vowel tier. NA value inserted.".format(
                                 row["speaker"], row["utterance"]
-                            ),
-                            UserWarning,
+                            )
                         )
 
         else:
@@ -601,19 +594,17 @@ class Analyzer:
                             ] = [tool_duration, target_duration, ratio_word_duration]
 
                         else:
-                            warnings.warn(
+                            logging.warning(
                                 "{}-{} is missing word annotations or the word annotations could not be automatically determined.".format(
                                     row["speaker"], row["utterance"]
-                                ),
-                                UserWarning,
+                                )
                             )
 
                 if found_word_tier is False:
-                    warnings.warn(
+                    logging.warning(
                         "{}-{} does not contain Word tier.".format(
                             row["speaker"], row["utterance"]
-                        ),
-                        UserWarning,
+                        )
                     )
                 else:
                     pass
@@ -696,11 +687,10 @@ class Analyzer:
                             pass
 
                 if found_tone_tier is False:
-                    warnings.warn(
+                    logging.warning(
                         "{}-{} does not contain tone tier.".format(
                             row["speaker"], row["utterance"]
-                        ),
-                        UserWarning,
+                        )
                     )
                 else:
                     pass
@@ -745,38 +735,50 @@ class Analyzer:
                 try:
                     v1_obj = snd_obj.extract_part(from_time=v1_start, to_time=v1_end)
                     pitch_obj_2 = v1_obj.to_pitch_cc(pitch_floor=q25, pitch_ceiling=q75)
-                    
+
                     h1_freq = praat.call(pitch_obj_2, "Get mean", 0, 0, "Hertz")
                     h2_freq = h1_freq * 2
-                    
+
                     h1_bw = 80 + 120 * h1_freq / 5_000
                     h2_bw = 80 + 120 * h2_freq / 5_000
-                    
-                    
-                    v1_obj_filt_h1 = praat.call(v1_obj, "Filter (one formant)", h1_freq, h1_bw)
-                    v1_obj_filt_h2 = praat.call(v1_obj, "Filter (one formant)", h2_freq, h2_bw)
-                    
+
+                    v1_obj_filt_h1 = praat.call(
+                        v1_obj, "Filter (one formant)", h1_freq, h1_bw
+                    )
+                    v1_obj_filt_h2 = praat.call(
+                        v1_obj, "Filter (one formant)", h2_freq, h2_bw
+                    )
+
                     h1 = praat.call(v1_obj_filt_h1, "Get intensity (dB)")
                     h2 = praat.call(v1_obj_filt_h2, "Get intensity (dB)")
-                    
+
                     """pp_obj = praat.call(pitch_obj_2, "To PointProcess")
                     ltas_obj = praat.call([v1_obj, pp_obj], "To Ltas (only harmonics)", 20, 0.0001, 0.02, 1.3)
                 
                     h1 = praat.call(ltas_obj, "Get value in bin", 2)
                     h2 = praat.call(ltas_obj, "Get value in bin", 3)"""
-                    
+
                     h1_h2 = h1 - h2
-                    
-                    self.data.loc[i, "h1_h2"] = [
-                        h1_h2
-                    ]
+
+                    self.data.loc[i, "h1_h2"] = [h1_h2]
                 except:
+                    logging.warning(
+                        "{}-{}: Error processing pitch data for H1-H2.".format(
+                            row["speaker"], row["utterance"]
+                        )
+                    )
                     continue
 
             else:
                 self.data.loc[i, "h1_h2"] = [
                     np.nan,
                 ]
+                logging.warning(
+                    "{}-{}: No vowel annotation.".format(
+                        row["speaker"], row["utterance"]
+                    )
+                )
+
 
 if __name__ == "__main__":
     Analyzer()
