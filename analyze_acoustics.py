@@ -9,7 +9,6 @@ from tqdm import tqdm
 import math
 import json
 
-
 def custom_warning(message, category, filename, lineno, line=None):
     return "{}:{}: {}: {}\n".format(
         filename, lineno, category.__name__, message
@@ -746,11 +745,25 @@ class Analyzer:
                 try:
                     v1_obj = snd_obj.extract_part(from_time=v1_start, to_time=v1_end)
                     pitch_obj_2 = v1_obj.to_pitch_cc(pitch_floor=q25, pitch_ceiling=q75)
-                    pp_obj = praat.call(pitch_obj_2, "To PointProcess")
+                    
+                    h1_freq = praat.call(pitch_obj_2, "Get mean", 0, 0, "Hertz")
+                    h2_freq = h1_freq * 2
+                    
+                    h1_bw = 80 + 120 * h1_freq / 5_000
+                    h2_bw = 80 + 120 * h2_freq / 5_000
+                    
+                    
+                    v1_obj_filt_h1 = praat.call(v1_obj, "Filter (one formant)", h1_freq, h1_bw)
+                    v1_obj_filt_h2 = praat.call(v1_obj, "Filter (one formant)", h2_freq, h2_bw)
+                    
+                    h1 = praat.call(v1_obj_filt_h1, "Get intensity (dB)")
+                    h2 = praat.call(v1_obj_filt_h2, "Get intensity (dB)")
+                    
+                    """pp_obj = praat.call(pitch_obj_2, "To PointProcess")
                     ltas_obj = praat.call([v1_obj, pp_obj], "To Ltas (only harmonics)", 20, 0.0001, 0.02, 1.3)
                 
                     h1 = praat.call(ltas_obj, "Get value in bin", 2)
-                    h2 = praat.call(ltas_obj, "Get value in bin", 3)
+                    h2 = praat.call(ltas_obj, "Get value in bin", 3)"""
                     
                     h1_h2 = h1 - h2
                     
@@ -759,8 +772,6 @@ class Analyzer:
                     ]
                 except:
                     continue
-
-               
 
             else:
                 self.data.loc[i, "h1_h2"] = [
